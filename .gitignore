@@ -1,0 +1,8 @@
+node_modules/
+node/
+runtime/
+release/
+package-lock.json
+build/icon.ico
+*.log
+.DS_Store
