@@ -1,0 +1,53 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.deepseek.harness",
+  "productName": "DeepSeek Harness",
+  "copyright": "Copyright © 2026 DeepSeek AI",
+  "directories": {
+    "output": "dist-release"
+  },
+  "files": [
+    "dist-electron/**/*",
+    "src/renderer/**/*",
+    "resources/**/*",
+    "package.json"
+  ],
+  "protocols": [
+    {
+      "name": "DeepSeek Harness Protocol",
+      "schemes": [
+        "dsh"
+      ]
+    }
+  ],
+  "win": {
+    "icon": "resources/icon.ico",
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      },
+      {
+        "target": "portable",
+        "arch": [
+          "x64"
+        ]
+      }
+    ]
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowElevation": true,
+    "allowToChangeInstallationDirectory": true,
+    "installerIcon": "resources/icon.ico",
+    "uninstallerIcon": "resources/icon.ico",
+    "installerHeaderIcon": "resources/icon.ico",
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "DeepSeek Harness",
+    "runAfterFinish": true
+  }
+}

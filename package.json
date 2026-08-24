@@ -1,50 +1,32 @@
 {
-  "name": "dsh-desktop",
-  "version": "0.1.0",
+  "name": "@deepseek-ai/dsh-desktop",
+  "description": "DeepSeek Harness official Windows desktop application",
+  "version": "0.1.1-rc.2",
   "private": true,
+  "main": "dist-electron/main/index.mjs",
   "type": "module",
-  "description": "Electron desktop shell for the DeepSeek Harness Web UI",
-  "author": "DeepSeek Harness",
-  "main": "main.js",
   "scripts": {
-    "start": "electron .",
-    "pack": "electron-builder --dir",
-    "dist": "electron-builder --win"
+    "build:icon": "tsx scripts/generate-ico.ts",
+    "build:main": "tsdown",
+    "build": "pnpm run build:icon && pnpm run build:main",
+    "start": "pnpm run build && electron dist-electron/main/index.cjs",
+    "dist": "pnpm run build && electron-builder --win",
+    "dist:dir": "pnpm run build && electron-builder --win --dir",
+    "pack": "pnpm run build && electron-builder"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh": "workspace:^",
+    "@deepseek-ai/dsh-web-frontend": "workspace:^",
+    "@deepseek-ai/schemastery": "workspace:^",
+    "ws": "^8.21.0"
   },
   "devDependencies": {
+    "asar": "^3.2.0",
     "electron": "^33.4.11",
-    "electron-builder": "^25.1.8"
-  },
-  "build": {
-    "appId": "com.deepseek.dsh-desktop",
-    "productName": "DeepSeek Harness",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "main.js",
-      "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "node",
-        "to": "node"
-      },
-      {
-        "from": "runtime",
-        "to": "runtime"
-      }
-    ],
-    "win": {
-      "target": [
-        "nsis"
-      ],
-      "icon": "build/icon.png"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true
-    }
+    "electron-builder": "^25.1.8",
+    "png-to-ico": "^2.1.8",
+    "rcedit": "^5.0.2",
+    "tsdown": "^0.22.2",
+    "typescript": "^6.0.3"
   }
 }

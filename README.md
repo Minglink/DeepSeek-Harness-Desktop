@@ -92,3 +92,5 @@ desktop/
 
 - å®˜æ–¹ DeepSeek Harness é‡‡ç”¨ [MIT License](https://github.com/deepseek-ai/deepseek-harness/blob/master/LICENSE)ã€‚
 - æœ¬é¡¹ç›®åŒæ ·ä»¥ MIT è®¸å¯å‘å¸ƒï¼ŒElectron åŠå…¶ä¾èµ–éµå¾ªå„è‡ªçš„å¼€æºè®¸å¯è¯ã€‚
+
+- **Ö§³ÖÒ»¼ü°²×°²å¼ş**£ºÍêÃÀ¼æÈİ¹Ù·½²å¼ş¼Ü¹¹£¬Í¨¹ıÍøÒ³ dsh:// Ğ­ÒéÒ»¼ü»½ĞÑ×ÀÃæ¶Ë°²×°²¢¼ÓÔØ²å¼ş¡£

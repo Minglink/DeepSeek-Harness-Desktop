@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeepSeek Harness - 插件安装确认</title>
+  <link rel="stylesheet" href="install-dialog.css">
+</head>
+<body>
+  <div class="modal-container">
+    <!-- Window Header -->
+    <div class="window-header">
+      <div class="brand">
+        <img src="../resources/icon.png" alt="DeepSeek" class="brand-icon">
+        <span class="brand-title">DeepSeek Harness 插件市场</span>
+      </div>
+      <button class="close-btn" id="closeHeaderBtn">&times;</button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content" id="dialogContent">
+      <div class="plugin-hero">
+        <div class="plugin-avatar-wrap">
+          <div class="plugin-avatar" id="pluginAvatar">🔌</div>
+        </div>
+        <div class="plugin-hero-info">
+          <h2 class="plugin-name" id="pluginName">正在加载插件信息...</h2>
+          <div class="plugin-meta">
+            <span class="badge badge-id" id="pluginId">id</span>
+            <span class="badge badge-version" id="pluginVersion">v1.0.0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <label class="section-label">来源仓库 / 包名</label>
+        <div class="repo-box" id="pluginRepo">nexu-io/open-design</div>
+      </div>
+
+      <div class="section">
+        <label class="section-label">申请权限 (Permissions)</label>
+        <div class="permissions-list" id="permissionsList">
+          <span class="perm-chip">常规权限</span>
+        </div>
+      </div>
+
+      <div class="section" id="downloadUrlSection" style="display: none;">
+        <label class="section-label">备用下载源</label>
+        <div class="url-box" id="downloadUrl"></div>
+      </div>
+
+      <!-- Security Notice -->
+      <div class="security-card">
+        <div class="security-icon">🛡️</div>
+        <div class="security-text">
+          <strong>安全提示：</strong>该插件将由 DeepSeek Harness 运行时载入。请确保插件来源为您信任的官方或第三方仓库。
+        </div>
+      </div>
+
+      <!-- Progress Section -->
+      <div class="progress-section" id="progressSection" style="display: none;">
+        <div class="progress-info">
+          <span class="progress-status" id="progressStatus">正在下载插件...</span>
+          <span class="progress-pct" id="progressPct"></span>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions Footer -->
+    <div class="footer" id="dialogFooter">
+      <button class="btn btn-secondary" id="cancelBtn">取消</button>
+      <button class="btn btn-primary" id="confirmBtn">
+        <span>🚀 确认并一键安装</span>
+      </button>
+    </div>
+  </div>
+
+  <script src="install-dialog.js"></script>
+</body>
+</html>
