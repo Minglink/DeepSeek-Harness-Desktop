@@ -33,11 +33,11 @@ export async function downloadAndInstallPlugin(payload, onProgress) {
   }
 
   if (downloadUrl) {
-    onProgress?.('姝ｅ湪涓嬭浇鎻掍欢瀹夎鍖?..')
+    onProgress?.('濮濓絽婀稉瀣祰閹绘帊娆㈢€瑰顥婇崠?..')
     const tempZip = path.join(os.tmpdir(), `dsh_plugin_${pluginId}_${Date.now()}.zip`)
     await downloadFile(downloadUrl, tempZip)
 
-    onProgress?.('姝ｅ湪瑙ｅ帇骞跺啓鍏ユ枃浠?..')
+    onProgress?.('濮濓絽婀憴锝呭竾楠炶泛鍟撻崗銉︽瀮娴?..')
     const tempExtract = path.join(os.tmpdir(), `dsh_extract_${pluginId}_${Date.now()}`)
     fs.mkdirSync(tempExtract, { recursive: true })
 
@@ -89,10 +89,13 @@ export async function downloadAndInstallPlugin(payload, onProgress) {
       const pluginPkg = JSON.parse(content)
       if (pluginPkg.name) pkgName = pluginPkg.name
       
-      // Inject dsh.bundle to prevent backend crash if it's missing
-      pluginPkg.dsh = pluginPkg.dsh || {}
-      pluginPkg.dsh.bundle = true
-      fs.writeFileSync(pluginPkgJsonPath, JSON.stringify(pluginPkg, null, 2) + '\n', 'utf8')
+      if (fs.existsSync(path.join(targetDir, 'cordis.patch.yml'))) {
+        pluginPkg.dsh = pluginPkg.dsh || {}
+        if (!pluginPkg.dsh.bundle || typeof pluginPkg.dsh.bundle === 'boolean') {
+          pluginPkg.dsh.bundle = { patch: './cordis.patch.yml' }
+          fs.writeFileSync(pluginPkgJsonPath, JSON.stringify(pluginPkg, null, 2) + '\n', 'utf8')
+        }
+      }
       
       if (pluginPkg.dsh?.bundle || fs.existsSync(path.join(targetDir, 'cordis.patch.yml'))) {
         isBundle = true
@@ -101,13 +104,13 @@ export async function downloadAndInstallPlugin(payload, onProgress) {
   }
 
   // 3. Configure profile dependencies and bundles
-  onProgress?.('姝ｅ湪閰嶇疆 Harness 鎻掍欢鐜涓庝緷璧栧叧绯?..')
+  onProgress?.('濮濓絽婀柊宥囩枂 Harness 閹绘帊娆㈤悳顖氼暔娑撳簼绶风挧鏍у彠缁?..')
   configureProfiles(dshHome, pluginId, pkgName, isBundle)
 
   // 4. Ensure directory junctions in node_modules
   ensurePluginLinks(dshHome, pluginId, pkgName)
 
-  onProgress?.('鎻掍欢瀹夎瀹屾垚锛佸凡鎴愬姛瑁呰浇')
+  onProgress?.('閹绘帊娆㈢€瑰顥婄€瑰本鍨氶敍浣稿嚒閹存劕濮涚憗鍛版祰')
 }
 
 function configureProfiles(dshHome, pluginId, pkgName, isBundle) {
@@ -212,13 +215,13 @@ function downloadFile(url, dest) {
     const client = url.startsWith('https:') ? https : http
 
     function makeRequest(currentUrl, redirects = 0) {
-      if (redirects > 5) return reject(new Error('閲嶅畾鍚戞鏁拌繃澶?))
+      if (redirects > 5) return reject(new Error('闁插秴鐣鹃崥鎴烆偧閺佹媽绻冩径?))
       client.get(currentUrl, (response) => {
         if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
           return makeRequest(response.headers.location, redirects + 1)
         }
         if (response.statusCode !== 200) {
-          return reject(new Error(`涓嬭浇澶辫触 HTTP ${response.statusCode}`))
+          return reject(new Error(`娑撳娴囨径杈Е HTTP ${response.statusCode}`))
         }
         response.pipe(file)
         file.on('finish', () => {
