@@ -84,8 +84,16 @@ export async function downloadAndInstallPlugin(payload, onProgress) {
   let isBundle = false
   if (fs.existsSync(pluginPkgJsonPath)) {
     try {
-      const pluginPkg = JSON.parse(fs.readFileSync(pluginPkgJsonPath, 'utf8'))
+      let content = fs.readFileSync(pluginPkgJsonPath, 'utf8')
+      if (content.charCodeAt(0) === 0xFEFF) content = content.slice(1)
+      const pluginPkg = JSON.parse(content)
       if (pluginPkg.name) pkgName = pluginPkg.name
+      
+      // Inject dsh.bundle to prevent backend crash if it's missing
+      pluginPkg.dsh = pluginPkg.dsh || {}
+      pluginPkg.dsh.bundle = true
+      fs.writeFileSync(pluginPkgJsonPath, JSON.stringify(pluginPkg, null, 2) + '\n', 'utf8')
+      
       if (pluginPkg.dsh?.bundle || fs.existsSync(path.join(targetDir, 'cordis.patch.yml'))) {
         isBundle = true
       }
