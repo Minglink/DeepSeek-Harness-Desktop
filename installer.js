@@ -33,11 +33,11 @@ export async function downloadAndInstallPlugin(payload, onProgress) {
   }
 
   if (downloadUrl) {
-    onProgress?.('正在下载插件安装包...')
+    onProgress?.('姝ｅ湪涓嬭浇鎻掍欢瀹夎鍖?..')
     const tempZip = path.join(os.tmpdir(), `dsh_plugin_${pluginId}_${Date.now()}.zip`)
     await downloadFile(downloadUrl, tempZip)
 
-    onProgress?.('正在解压并写入文件...')
+    onProgress?.('姝ｅ湪瑙ｅ帇骞跺啓鍏ユ枃浠?..')
     const tempExtract = path.join(os.tmpdir(), `dsh_extract_${pluginId}_${Date.now()}`)
     fs.mkdirSync(tempExtract, { recursive: true })
 
@@ -52,6 +52,18 @@ export async function downloadAndInstallPlugin(payload, onProgress) {
     const items = fs.readdirSync(tempExtract)
     if (items.length === 1 && fs.statSync(path.join(tempExtract, items[0])).isDirectory()) {
       srcDir = path.join(tempExtract, items[0])
+    }
+
+    if (!fs.existsSync(path.join(srcDir, 'package.json'))) {
+      const monorepoPath1 = path.join(srcDir, 'plugins', pluginId)
+      const monorepoPath2 = path.join(srcDir, 'packages', pluginId)
+      if (fs.existsSync(path.join(monorepoPath1, 'package.json'))) {
+        srcDir = monorepoPath1
+      } else if (fs.existsSync(path.join(monorepoPath2, 'package.json'))) {
+        srcDir = monorepoPath2
+      } else if (fs.existsSync(path.join(srcDir, pluginId, 'package.json'))) {
+        srcDir = path.join(srcDir, pluginId)
+      }
     }
 
     copyRecursiveSync(srcDir, targetDir)
@@ -81,13 +93,13 @@ export async function downloadAndInstallPlugin(payload, onProgress) {
   }
 
   // 3. Configure profile dependencies and bundles
-  onProgress?.('正在配置 Harness 插件环境与依赖关系...')
+  onProgress?.('姝ｅ湪閰嶇疆 Harness 鎻掍欢鐜涓庝緷璧栧叧绯?..')
   configureProfiles(dshHome, pluginId, pkgName, isBundle)
 
   // 4. Ensure directory junctions in node_modules
   ensurePluginLinks(dshHome, pluginId, pkgName)
 
-  onProgress?.('插件安装完成！已成功装载')
+  onProgress?.('鎻掍欢瀹夎瀹屾垚锛佸凡鎴愬姛瑁呰浇')
 }
 
 function configureProfiles(dshHome, pluginId, pkgName, isBundle) {
@@ -192,13 +204,13 @@ function downloadFile(url, dest) {
     const client = url.startsWith('https:') ? https : http
 
     function makeRequest(currentUrl, redirects = 0) {
-      if (redirects > 5) return reject(new Error('重定向次数过多'))
+      if (redirects > 5) return reject(new Error('閲嶅畾鍚戞鏁拌繃澶?))
       client.get(currentUrl, (response) => {
         if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
           return makeRequest(response.headers.location, redirects + 1)
         }
         if (response.statusCode !== 200) {
-          return reject(new Error(`下载失败 HTTP ${response.statusCode}`))
+          return reject(new Error(`涓嬭浇澶辫触 HTTP ${response.statusCode}`))
         }
         response.pipe(file)
         file.on('finish', () => {
