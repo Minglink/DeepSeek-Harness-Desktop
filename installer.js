@@ -24,8 +24,12 @@ export async function downloadAndInstallPlugin(payload, onProgress) {
 
   // 1. Determine download source
   let downloadUrl = payload.downloadUrl
+  if (downloadUrl && !downloadUrl.startsWith('http://') && !downloadUrl.startsWith('https://')) {
+    downloadUrl = ''
+  }
+
   if (!downloadUrl && payload.repo && payload.repo.includes('/')) {
-    downloadUrl = `https://github.com/${payload.repo}/archive/refs/heads/main.zip`
+    downloadUrl = `https://github.com/${payload.repo}/archive/HEAD.zip`
   }
 
   if (downloadUrl) {
