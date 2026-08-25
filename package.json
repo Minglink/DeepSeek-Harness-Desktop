@@ -1,9 +1,9 @@
 {
   "name": "dsh-desktop",
-  "version": "0.1.0",
+  "version": "0.1.0-a",
   "private": true,
   "type": "module",
-  "description": "Electron desktop shell for the DeepSeek Harness Web UI",
+  "description": "Electron desktop shell for the DeepSeek Harness Web UI with one-click plugin install support (dsh://)",
   "author": "DeepSeek Harness",
   "main": "main.js",
   "scripts": {
@@ -18,11 +18,20 @@
   "build": {
     "appId": "com.deepseek.dsh-desktop",
     "productName": "DeepSeek Harness",
+    "protocols": [
+      {
+        "name": "DeepSeek Harness Protocol",
+        "schemes": [
+          "dsh"
+        ]
+      }
+    ],
     "directories": {
       "output": "release"
     },
     "files": [
       "main.js",
+      "installer.js",
       "package.json"
     ],
     "extraResources": [
