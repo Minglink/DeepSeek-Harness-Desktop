@@ -33,11 +33,11 @@ export async function downloadAndInstallPlugin(payload, onProgress) {
   }
 
   if (downloadUrl) {
-    onProgress?.('濮濓絽婀稉瀣祰閹绘帊娆㈢€瑰顥婇崠?..')
+    onProgress?.('濠殿喗绻愮徊钘夛耿椤忓懐鈻旈悗锝庡幗缁佷即鏌熺紒妯虹瑐婵炲棎鍨婚埀顒傛嚀椤︽娊藟婵犲洤绀?..')
     const tempZip = path.join(os.tmpdir(), `dsh_plugin_${pluginId}_${Date.now()}.zip`)
     await downloadFile(downloadUrl, tempZip)
 
-    onProgress?.('濮濓絽婀憴锝呭竾楠炶泛鍟撻崗銉︽瀮娴?..')
+    onProgress?.('濠殿喗绻愮徊钘夛耿椤忓棙鍠嗛柨婵嗘噹缁旂偓顨ラ悙鑸电【闁哥喐鎹囧畷妤呭Ψ閿旂晫鈧喖霉?..')
     const tempExtract = path.join(os.tmpdir(), `dsh_extract_${pluginId}_${Date.now()}`)
     fs.mkdirSync(tempExtract, { recursive: true })
 
@@ -82,6 +82,7 @@ export async function downloadAndInstallPlugin(payload, onProgress) {
   let pkgName = pluginId
   const pluginPkgJsonPath = path.join(targetDir, 'package.json')
   let isBundle = false
+  let isBundle = false
   if (fs.existsSync(pluginPkgJsonPath)) {
     try {
       let content = fs.readFileSync(pluginPkgJsonPath, 'utf8')
@@ -104,13 +105,13 @@ export async function downloadAndInstallPlugin(payload, onProgress) {
   }
 
   // 3. Configure profile dependencies and bundles
-  onProgress?.('濮濓絽婀柊宥囩枂 Harness 閹绘帊娆㈤悳顖氼暔娑撳簼绶风挧鏍у彠缁?..')
+  onProgress?.('濠殿喗绻愮徊钘夛耿椤忓牊鐓€鐎广儱娲ㄩ弸?Harness 闂佸湱绮敮濠傗枎閵忋倖鍋濇い鏍ㄥ嚬閺嗘柨鈽夐幘宕囧嚬缂佸爼顥撻幐褔寮借瑜扮姷绱?..')
   configureProfiles(dshHome, pluginId, pkgName, isBundle)
 
   // 4. Ensure directory junctions in node_modules
   ensurePluginLinks(dshHome, pluginId, pkgName)
 
-  onProgress?.('閹绘帊娆㈢€瑰顥婄€瑰本鍨氶敍浣稿嚒閹存劕濮涚憗鍛版祰')
+  onProgress?.('闂佸湱绮敮濠傗枎閵忊懇鍋撻悷閭︽Ъ妞ゃ儱锕﹂埀顒傛嚀閺堫剟宕瑰鑸垫櫖濞达絿顭堥崵鎺楁煙鐎涙ê濮囧┑顔界〒閹叉宕ㄩ悧鍫偘')
 }
 
 function configureProfiles(dshHome, pluginId, pkgName, isBundle) {
@@ -148,7 +149,7 @@ function configureProfiles(dshHome, pluginId, pkgName, isBundle) {
     pkg.dsh.profile = pkg.dsh.profile || {}
     pkg.dsh.profile.bundles = pkg.dsh.profile.bundles || ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app']
 
-    if (!pkg.dsh.profile.bundles.includes(pkgName)) {
+    if (isBundle && !pkg.dsh.profile.bundles.includes(pkgName)) {
       pkg.dsh.profile.bundles.push(pkgName)
     }
 
@@ -215,13 +216,13 @@ function downloadFile(url, dest) {
     const client = url.startsWith('https:') ? https : http
 
     function makeRequest(currentUrl, redirects = 0) {
-      if (redirects > 5) return reject(new Error('闁插秴鐣鹃崥鎴烆偧閺佹媽绻冩径?))
+      if (redirects > 5) return reject(new Error('闂備焦褰冪粔鎾偩妤ｅ啫瑙﹂柟瀵稿剱閸嬔囨煛娴ｇ懓顎滅紒璇插暞瀵?))
       client.get(currentUrl, (response) => {
         if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
           return makeRequest(response.headers.location, redirects + 1)
         }
         if (response.statusCode !== 200) {
-          return reject(new Error(`娑撳娴囨径杈Е HTTP ${response.statusCode}`))
+          return reject(new Error(`婵炴垶鎸搁鍫澝归崶銊ョ窞閺夊牜鍋夎 HTTP ${response.statusCode}`))
         }
         response.pipe(file)
         file.on('finish', () => {
