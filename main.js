@@ -1,9 +1,10 @@
 import { app, BrowserWindow, dialog, shell, ipcMain } from 'electron'
-import { spawn } from 'node:child_process'
+import { spawn, execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import os from 'node:os'
 import { existsSync, appendFileSync } from 'node:fs'
-import { downloadAndInstallPlugin } from './installer.js'
+import { downloadAndInstallPlugin, reconcileAllPlugins, getDshHome } from './installer.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -21,10 +22,23 @@ function log(message) {
 let backend = null
 let mainWindow = null
 let installDialog = null
+let intentionalStop = false
 
 function bundledBackend() {
   const nodePath = path.join(process.resourcesPath, 'node', 'node.exe')
   const runtimeDir = path.join(process.resourcesPath, 'runtime')
+  const entry = path.join(runtimeDir, 'lib', 'bin.js')
+  if (existsSync(nodePath) && existsSync(entry)) {
+    return { node: nodePath, entry, cwd: runtimeDir }
+  }
+  return null
+}
+
+function installedBackend() {
+  const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local')
+  const base = path.join(localAppData, 'Programs', 'DeepSeek-Harness', 'resources')
+  const nodePath = path.join(base, 'node', 'node.exe')
+  const runtimeDir = path.join(base, 'runtime')
   const entry = path.join(runtimeDir, 'lib', 'bin.js')
   if (existsSync(nodePath) && existsSync(entry)) {
     return { node: nodePath, entry, cwd: runtimeDir }
@@ -47,7 +61,7 @@ function devBackend() {
 }
 
 function resolveBackend() {
-  return bundledBackend() || devBackend()
+  return bundledBackend() || installedBackend() || devBackend()
 }
 
 async function probe(url, timeoutMs) {
@@ -68,6 +82,7 @@ function showFatal(title, detail) {
 }
 
 function startBackend(target) {
+  intentionalStop = false
   log(`startBackend: node=${target.node}`)
   log(`startBackend: entry=${target.entry} exists=${existsSync(target.entry)}`)
   const runtimeModules = path.join(target.cwd, 'node_modules')
@@ -82,26 +97,49 @@ function startBackend(target) {
     env,
   })
   backend.on('exit', (code, signal) => {
-    log(`backend exit: code=${code} signal=${signal}`)
+    log(`backend exit: code=${code} signal=${signal} intentionalStop=${intentionalStop} isQuitting=${app.isQuitting}`)
+    const isExpected = intentionalStop || app.isQuitting
     backend = null
-    if (!app.isQuitting) {
+    if (!isExpected) {
       showFatal('DeepSeek Harness 已退出', `后端服务意外停止（退出码 ${code}）。`)
     }
   })
   backend.on('error', (error) => {
     log(`backend spawn error: ${error.message}`)
     backend = null
-    if (!app.isQuitting) {
+    if (!intentionalStop && !app.isQuitting) {
       showFatal('无法启动 DeepSeek Harness', `启动后端失败：${error.message}`)
     }
   })
 }
 
 function stopBackend() {
-  if (backend && !backend.killed) {
-    backend.kill()
+  intentionalStop = true
+  if (backend) {
+    const pid = backend.pid
+    try {
+      if (process.platform === 'win32' && pid) {
+        try {
+          execFileSync('taskkill.exe', ['/PID', String(pid), '/F', '/T'], { stdio: 'ignore' })
+        } catch {}
+      }
+      backend.kill('SIGTERM')
+    } catch {}
     backend = null
   }
+}
+
+async function restartBackend() {
+  log('restartBackend requested')
+  stopBackend()
+  await new Promise((resolve) => setTimeout(resolve, 1000))
+  const target = resolveBackend()
+  if (target) {
+    startBackend(target)
+    const up = await probe(APP_URL, 15000)
+    return up
+  }
+  return false
 }
 
 function registerProtocol() {
@@ -248,7 +286,7 @@ function showPluginInstallDialog(payload) {
       document.getElementById('status').innerText = msg
     })
     ipcRenderer.on('dsh-install-done', () => {
-      document.getElementById('status').innerHTML = '<span style="color: #4ade80;">✅ 安装成功！已自动装载</span>'
+      document.getElementById('status').innerHTML = '<span style="color: #4ade80;">✅ 安装成功！已自动装载并热重启</span>'
       setTimeout(() => {
         window.close()
       }, 1200)
@@ -299,6 +337,10 @@ ipcMain.on('dsh-install-plugin', async (event, payload) => {
       }
     })
     if (installDialog && !installDialog.isDestroyed()) {
+      installDialog.webContents.send('dsh-install-status', '正在重启后端服务以载入插件...')
+    }
+    await restartBackend()
+    if (installDialog && !installDialog.isDestroyed()) {
       installDialog.webContents.send('dsh-install-done')
     }
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -313,6 +355,17 @@ ipcMain.on('dsh-install-plugin', async (event, payload) => {
 
 async function createWindow() {
   registerProtocol()
+
+  // Auto-sync and repair all plugins in ~/.dsh/plugins on application startup
+  try {
+    const dshHome = getDshHome()
+    const healed = reconcileAllPlugins(dshHome)
+    if (healed.length > 0) {
+      log(`Auto-reconciled plugins on startup: ${healed.join(', ')}`)
+    }
+  } catch (e) {
+    log(`Plugin auto-reconcile error: ${e.message}`)
+  }
 
   const alreadyUp = await probe(APP_URL, 400)
   if (!alreadyUp) {
@@ -384,3 +437,4 @@ if (!gotLock) {
     app.quit()
   })
 }
+

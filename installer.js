@@ -5,13 +5,13 @@ import https from 'node:https'
 import http from 'node:http'
 import { execFileSync } from 'node:child_process'
 
-function getDshHome() {
+export function getDshHome() {
   return process.env.DSH_HOME || path.join(os.homedir(), '.dsh')
 }
 
 /**
  * Downloads, extracts, and configures a DeepSeek Harness plugin into ~/.dsh
- * Both as a profile bundle and/or loader patch so it is 100% active in backend and UI.
+ * Both as a profile bundle and loader patch so it is 100% active in backend and UI.
  */
 export async function downloadAndInstallPlugin(payload, onProgress) {
   const dshHome = getDshHome()
@@ -27,43 +27,42 @@ export async function downloadAndInstallPlugin(payload, onProgress) {
   if (downloadUrl && !downloadUrl.startsWith('http://') && !downloadUrl.startsWith('https://')) {
     downloadUrl = ''
   }
-
   if (!downloadUrl && payload.repo && payload.repo.includes('/')) {
     downloadUrl = `https://github.com/${payload.repo}/archive/HEAD.zip`
   }
 
   if (downloadUrl) {
-    onProgress?.('濠殿喗绻愮徊钘夛耿椤忓懐鈻旈悗锝庡幗缁佷即鏌熺紒妯虹瑐婵炲棎鍨婚埀顒傛嚀椤︽娊藟婵犲洤绀?..')
+    onProgress?.(`正在下载插件安装包：${payload.name || pluginId}...`)
     const tempZip = path.join(os.tmpdir(), `dsh_plugin_${pluginId}_${Date.now()}.zip`)
-    await downloadFile(downloadUrl, tempZip)
+    await downloadFile(downloadUrl, tempZip, (pct) => {
+      onProgress?.(`正在下载插件安装包 (${pct}%)...`)
+    })
 
-    onProgress?.('濠殿喗绻愮徊钘夛耿椤忓棙鍠嗛柨婵嗘噹缁旂偓顨ラ悙鑸电【闁哥喐鎹囧畷妤呭Ψ閿旂晫鈧喖霉?..')
+    onProgress?.('正在解压并写入文件...')
     const tempExtract = path.join(os.tmpdir(), `dsh_extract_${pluginId}_${Date.now()}`)
     fs.mkdirSync(tempExtract, { recursive: true })
 
     try {
       execFileSync('tar.exe', ['-xf', tempZip, '-C', tempExtract], { stdio: 'ignore' })
     } catch {
-      execFileSync('powershell.exe', ['-Command', `Expand-Archive -Force -Path "${tempZip}" -DestinationPath "${tempExtract}"`], { stdio: 'ignore' })
+      execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `Expand-Archive -Force -Path "${tempZip}" -DestinationPath "${tempExtract}"`], { stdio: 'ignore' })
     }
 
-    // Flatten if single root directory in archive
+    // Flatten nested directory if archive wraps contents
     let srcDir = tempExtract
     const items = fs.readdirSync(tempExtract)
     if (items.length === 1 && fs.statSync(path.join(tempExtract, items[0])).isDirectory()) {
       srcDir = path.join(tempExtract, items[0])
     }
 
+    // Locate package directory if monorepo
     if (!fs.existsSync(path.join(srcDir, 'package.json'))) {
-      const monorepoPath1 = path.join(srcDir, 'plugins', pluginId)
-      const monorepoPath2 = path.join(srcDir, 'packages', pluginId)
-      if (fs.existsSync(path.join(monorepoPath1, 'package.json'))) {
-        srcDir = monorepoPath1
-      } else if (fs.existsSync(path.join(monorepoPath2, 'package.json'))) {
-        srcDir = monorepoPath2
-      } else if (fs.existsSync(path.join(srcDir, pluginId, 'package.json'))) {
-        srcDir = path.join(srcDir, pluginId)
-      }
+      const p1 = path.join(srcDir, 'plugins', pluginId)
+      const p2 = path.join(srcDir, 'packages', pluginId)
+      const p3 = path.join(srcDir, pluginId)
+      if (fs.existsSync(path.join(p1, 'package.json'))) srcDir = p1
+      else if (fs.existsSync(path.join(p2, 'package.json'))) srcDir = p2
+      else if (fs.existsSync(path.join(p3, 'package.json'))) srcDir = p3
     }
 
     copyRecursiveSync(srcDir, targetDir)
@@ -78,18 +77,17 @@ export async function downloadAndInstallPlugin(payload, onProgress) {
     }
   }
 
-  // 2. Read plugin manifest to get exact package name and bundle info
+  // 2. Read plugin manifest & patch declaration
   let pkgName = pluginId
   const pluginPkgJsonPath = path.join(targetDir, 'package.json')
-  let isBundle = false
-  let isBundle = false
   if (fs.existsSync(pluginPkgJsonPath)) {
     try {
       let content = fs.readFileSync(pluginPkgJsonPath, 'utf8')
       if (content.charCodeAt(0) === 0xFEFF) content = content.slice(1)
       const pluginPkg = JSON.parse(content)
       if (pluginPkg.name) pkgName = pluginPkg.name
-      
+
+      // Ensure cordis patch is configured if cordis.patch.yml exists
       if (fs.existsSync(path.join(targetDir, 'cordis.patch.yml'))) {
         pluginPkg.dsh = pluginPkg.dsh || {}
         if (!pluginPkg.dsh.bundle || typeof pluginPkg.dsh.bundle === 'boolean') {
@@ -97,24 +95,25 @@ export async function downloadAndInstallPlugin(payload, onProgress) {
           fs.writeFileSync(pluginPkgJsonPath, JSON.stringify(pluginPkg, null, 2) + '\n', 'utf8')
         }
       }
-      
-      if (pluginPkg.dsh?.bundle || fs.existsSync(path.join(targetDir, 'cordis.patch.yml'))) {
-        isBundle = true
-      }
     } catch {}
   }
 
   // 3. Configure profile dependencies and bundles
-  onProgress?.('濠殿喗绻愮徊钘夛耿椤忓牊鐓€鐎广儱娲ㄩ弸?Harness 闂佸湱绮敮濠傗枎閵忋倖鍋濇い鏍ㄥ嚬閺嗘柨鈽夐幘宕囧嚬缂佸爼顥撻幐褔寮借瑜扮姷绱?..')
-  configureProfiles(dshHome, pluginId, pkgName, isBundle)
+  onProgress?.('正在配置 Harness 插件环境与依赖关系 (注册 bundles)...')
+  configureProfiles(dshHome, pluginId, pkgName)
 
-  // 4. Ensure directory junctions in node_modules
+  // 4. Ensure directory junctions in all node_modules
   ensurePluginLinks(dshHome, pluginId, pkgName)
 
-  onProgress?.('闂佸湱绮敮濠傗枎閵忊懇鍋撻悷閭︽Ъ妞ゃ儱锕﹂埀顒傛嚀閺堫剟宕瑰鑸垫櫖濞达絿顭堥崵鎺楁煙鐎涙ê濮囧┑顔界〒閹叉宕ㄩ悧鍫偘')
+  onProgress?.('插件配置完成！')
 }
 
-function configureProfiles(dshHome, pluginId, pkgName, isBundle) {
+/**
+ * Configure profiles (web and default) so that:
+ * 1. dependencies includes the file: link to plugins/<pluginId>
+ * 2. dsh.profile.bundles includes the package name to be loaded into the runtime
+ */
+export function configureProfiles(dshHome, pluginId, pkgName) {
   const profileNames = ['web', 'default']
   for (const name of profileNames) {
     const profileDir = path.join(dshHome, 'profiles', name)
@@ -149,51 +148,126 @@ function configureProfiles(dshHome, pluginId, pkgName, isBundle) {
     pkg.dsh.profile = pkg.dsh.profile || {}
     pkg.dsh.profile.bundles = pkg.dsh.profile.bundles || ['@deepseek-ai/dsh-base', '@deepseek-ai/dsh-web-app']
 
-    if (isBundle && !pkg.dsh.profile.bundles.includes(pkgName)) {
+    // Ensure base bundles exist
+    if (!pkg.dsh.profile.bundles.includes('@deepseek-ai/dsh-base')) {
+      pkg.dsh.profile.bundles.unshift('@deepseek-ai/dsh-base')
+    }
+    if (!pkg.dsh.profile.bundles.includes('@deepseek-ai/dsh-web-app')) {
+      pkg.dsh.profile.bundles.splice(1, 0, '@deepseek-ai/dsh-web-app')
+    }
+
+    // Always ensure the plugin is registered in bundles so Harness loads it
+    if (!pkg.dsh.profile.bundles.includes(pkgName)) {
       pkg.dsh.profile.bundles.push(pkgName)
     }
 
-    // Write valid, BOM-free JSON
+    // Write valid, BOM-free UTF-8 JSON
     fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf8')
   }
 }
 
-function ensurePluginLinks(dshHome, pluginId, pkgName) {
+/**
+ * Creates directory junctions / symlinks across all node_modules search paths.
+ */
+export function ensurePluginLinks(dshHome, pluginId, pkgName) {
   const pluginDir = path.join(dshHome, 'plugins', pluginId)
-  const targets = [
-    path.join(dshHome, 'node_modules', pkgName),
-    path.join(dshHome, 'profiles', 'web', 'node_modules', pkgName),
-    path.join(dshHome, 'profiles', 'default', 'node_modules', pkgName),
+  if (!fs.existsSync(pluginDir)) return
+
+  const targetNames = Array.from(new Set([pkgName, pluginId].filter(Boolean)))
+  
+  const searchDirs = [
+    path.join(dshHome, 'profiles', 'web', 'node_modules'),
+    path.join(dshHome, 'profiles', 'node_modules'),
+    path.join(dshHome, 'node_modules'),
+    path.join(dshHome, 'profiles', 'default', 'node_modules'),
   ]
 
-  for (const target of targets) {
-    try {
-      const parentDir = path.dirname(target)
-      if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true })
-      if (fs.existsSync(target)) {
-        try { fs.rmSync(target, { recursive: true, force: true }) } catch {}
-      }
+  for (const dir of searchDirs) {
+    for (const name of targetNames) {
+      const target = path.join(dir, name)
       try {
-        fs.symlinkSync(pluginDir, target, 'junction')
-      } catch {
-        copyRecursiveSync(pluginDir, target)
-      }
-    } catch {}
+        const parentDir = path.dirname(target)
+        if (!fs.existsSync(parentDir)) fs.mkdirSync(parentDir, { recursive: true })
+        if (fs.existsSync(target)) {
+          try { fs.rmSync(target, { recursive: true, force: true }) } catch {}
+        }
+        try {
+          fs.symlinkSync(pluginDir, target, 'junction')
+        } catch {
+          copyRecursiveSync(pluginDir, target)
+        }
+      } catch {}
+    }
   }
 
-  // Also ensure core @deepseek-ai runtime modules are linked
+  // Also ensure core @deepseek-ai runtime modules are linked if runtime resources exist
   try {
-    const dshModules = path.join(dshHome, 'node_modules')
-    const runtimeAi = path.join(process.resourcesPath, 'runtime', 'node_modules', '@deepseek-ai')
-    const dshAi = path.join(dshModules, '@deepseek-ai')
-    if (fs.existsSync(runtimeAi) && !fs.existsSync(dshAi)) {
-      try {
-        fs.symlinkSync(runtimeAi, dshAi, 'junction')
-      } catch {
-        copyRecursiveSync(runtimeAi, dshAi)
+    const runtimeAiDirs = [
+      process.resourcesPath && path.join(process.resourcesPath, 'runtime', 'node_modules', '@deepseek-ai'),
+      process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'Programs', 'DeepSeek-Harness', 'resources', 'runtime', 'node_modules', '@deepseek-ai'),
+    ].filter(Boolean)
+
+    for (const runtimeAi of runtimeAiDirs) {
+      if (fs.existsSync(runtimeAi)) {
+        const dshAi = path.join(dshHome, 'node_modules', '@deepseek-ai')
+        const profileWebAi = path.join(dshHome, 'profiles', 'web', 'node_modules', '@deepseek-ai')
+        const profileAi = path.join(dshHome, 'profiles', 'node_modules', '@deepseek-ai')
+        for (const destAi of [dshAi, profileWebAi, profileAi]) {
+          if (!fs.existsSync(destAi)) {
+            try {
+              fs.mkdirSync(path.dirname(destAi), { recursive: true })
+              fs.symlinkSync(runtimeAi, destAi, 'junction')
+            } catch {
+              try { copyRecursiveSync(runtimeAi, destAi) } catch {}
+            }
+          }
+        }
+        break
       }
     }
   } catch {}
+}
+
+/**
+ * Automatically scans ~/.dsh/plugins and reconciles all installed plugins into profiles & bundles.
+ * Call this on app startup to auto-heal any plugins installed manually or via previous versions.
+ */
+export function reconcileAllPlugins(dshHome = getDshHome()) {
+  const pluginsRoot = path.join(dshHome, 'plugins')
+  if (!fs.existsSync(pluginsRoot)) return []
+
+  const reconciled = []
+  const entries = fs.readdirSync(pluginsRoot, { withFileTypes: true })
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue
+    const pluginId = entry.name
+    const targetDir = path.join(pluginsRoot, pluginId)
+    let pkgName = pluginId
+
+    const pluginPkgJsonPath = path.join(targetDir, 'package.json')
+    if (fs.existsSync(pluginPkgJsonPath)) {
+      try {
+        let content = fs.readFileSync(pluginPkgJsonPath, 'utf8')
+        if (content.charCodeAt(0) === 0xFEFF) content = content.slice(1)
+        const pluginPkg = JSON.parse(content)
+        if (pluginPkg.name) pkgName = pluginPkg.name
+
+        if (fs.existsSync(path.join(targetDir, 'cordis.patch.yml'))) {
+          pluginPkg.dsh = pluginPkg.dsh || {}
+          if (!pluginPkg.dsh.bundle || typeof pluginPkg.dsh.bundle === 'boolean') {
+            pluginPkg.dsh.bundle = { patch: './cordis.patch.yml' }
+            fs.writeFileSync(pluginPkgJsonPath, JSON.stringify(pluginPkg, null, 2) + '\n', 'utf8')
+          }
+        }
+      } catch {}
+    }
+
+    configureProfiles(dshHome, pluginId, pkgName)
+    ensurePluginLinks(dshHome, pluginId, pkgName)
+    reconciled.push(pkgName)
+  }
+
+  return reconciled
 }
 
 function copyRecursiveSync(src, dest) {
@@ -210,20 +284,30 @@ function copyRecursiveSync(src, dest) {
   }
 }
 
-function downloadFile(url, dest) {
+function downloadFile(url, dest, onProgress) {
   return new Promise((resolve, reject) => {
     const file = fs.createWriteStream(dest)
     const client = url.startsWith('https:') ? https : http
 
     function makeRequest(currentUrl, redirects = 0) {
-      if (redirects > 5) return reject(new Error('闂備焦褰冪粔鎾偩妤ｅ啫瑙﹂柟瀵稿剱閸嬔囨煛娴ｇ懓顎滅紒璇插暞瀵?))
+      if (redirects > 5) return reject(new Error('重定向次数过多'))
       client.get(currentUrl, (response) => {
         if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
           return makeRequest(response.headers.location, redirects + 1)
         }
         if (response.statusCode !== 200) {
-          return reject(new Error(`婵炴垶鎸搁鍫澝归崶銊ョ窞閺夊牜鍋夎 HTTP ${response.statusCode}`))
+          return reject(new Error(`下载失败 HTTP ${response.statusCode}`))
         }
+        const totalBytes = parseInt(response.headers['content-length'] || '0', 10)
+        let downloadedBytes = 0
+
+        response.on('data', (chunk) => {
+          downloadedBytes += chunk.length
+          if (totalBytes > 0 && onProgress) {
+            onProgress(Math.round((downloadedBytes / totalBytes) * 100))
+          }
+        })
+
         response.pipe(file)
         file.on('finish', () => {
           file.close()
