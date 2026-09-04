@@ -1,10 +1,10 @@
 {
   "name": "dsh-desktop",
-  "version": "0.1.0-a",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
-  "description": "Electron desktop shell for the DeepSeek Harness Web UI with one-click plugin install support (dsh://)",
-  "author": "DeepSeek Harness",
+  "description": "DeepSeek Harness Desktop with one-click plugin install support (dsh://)",
+  "author": "DeepSeek AI",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -44,6 +44,7 @@
         "to": "runtime"
       }
     ],
+    "compression": "normal",
     "win": {
       "target": [
         "nsis"
@@ -53,7 +54,11 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "DeepSeek Harness",
+      "differentialPackage": false,
+      "include": "build/installer.nsh"
     }
   }
 }
