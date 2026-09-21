@@ -1,9 +1,9 @@
 {
   "name": "dsh-desktop",
-  "version": "0.1.2",
+  "version": "0.1.6-max",
   "private": true,
   "type": "module",
-  "description": "DeepSeek Harness Desktop with one-click plugin install support (dsh://)",
+  "description": "DeepSeek Harness Desktop (0.1.6 Max Edition)",
   "author": "DeepSeek AI",
   "main": "main.js",
   "scripts": {
@@ -12,12 +12,13 @@
     "dist": "electron-builder --win"
   },
   "devDependencies": {
-    "electron": "^33.4.11",
+    "electron": "33.4.11",
     "electron-builder": "^25.1.8"
   },
   "build": {
     "appId": "com.deepseek.dsh-desktop",
     "productName": "DeepSeek Harness",
+    "artifactName": "deepseek-harness 安装包 0.1.6 max.${ext}",
     "protocols": [
       {
         "name": "DeepSeek Harness Protocol",
@@ -32,16 +33,34 @@
     "files": [
       "main.js",
       "installer.js",
-      "package.json"
+      "api-vault.js",
+      "market.html",
+      "package.json",
+      "build/**/*"
     ],
     "extraResources": [
       {
         "from": "node",
-        "to": "node"
+        "to": "node",
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "runtime",
-        "to": "runtime"
+        "to": "runtime",
+        "filter": [
+          "lib/**/*",
+          "config/**/*",
+          "package.json"
+        ]
+      },
+      {
+        "from": "runtime/node_modules",
+        "to": "runtime/node_modules",
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "compression": "normal",
@@ -49,15 +68,19 @@
       "target": [
         "nsis"
       ],
-      "icon": "build/icon.png"
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
+      "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "DeepSeek Harness",
       "differentialPackage": false,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
       "include": "build/installer.nsh"
     }
   }

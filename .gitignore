@@ -3,6 +3,15 @@ node/
 runtime/
 release/
 package-lock.json
-build/icon.ico
 *.log
+*.txt
+*.jsc
+*.node
+*.tgz
+*.tar.gz
 .DS_Store
+.dsh/
+.env*
+scratch/
+guard_native/target/
+DSH - 破甲包/

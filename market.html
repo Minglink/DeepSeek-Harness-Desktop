@@ -1,0 +1,3835 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeepSeek Harness 插件市场 · Stream Hub</title>
+  <style>
+    :root {
+      --bg-main: #ffffff;
+      --bg-card: #ffffff;
+      --border-color: #e5e7eb;
+      --border-hover: #bae6fd;
+      --border-focus: #0284c7;
+      --text-main: #111827;
+      --text-secondary: #374151;
+      --text-muted: #6b7280;
+      --accent-blue: #0284c7;
+      --accent-blue-deep: #0369a1;
+      --accent-blue-light: #f0f9ff;
+      --accent-blue-glow: rgba(2, 132, 199, 0.08);
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #ef4444;
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.03);
+      --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.04);
+      --shadow-lg: 0 8px 20px rgba(0, 0, 0, 0.06);
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding-bottom: 90px;
+      background-image: 
+        radial-gradient(circle at 12% 15%, rgba(2, 132, 199, 0.05) 0%, transparent 45%),
+        radial-gradient(circle at 88% 85%, rgba(79, 70, 229, 0.04) 0%, transparent 45%);
+    }
+
+    body.embedded {
+      padding-bottom: 24px;
+      background-image: none;
+    }
+    body.embedded header {
+      display: none !important;
+
+      display: none !important; /* 彻底消除设置内双重重复顶部栏 */
+    }
+    body.embedded {
+      padding: 0 0 20px 0;
+      background: #ffffff;
+    }
+    body.embedded .brand-text h1 {
+      font-size: 14px;
+    }
+    body.embedded .brand-text p {
+      display: none;
+    }
+    body.embedded .main-nav-section {
+      margin: 10px auto 0;
+      padding: 0 16px;
+    }
+    body.embedded .main-tabs-nav {
+      gap: 6px;
+      padding: 4px;
+      border-radius: 10px;
+      background: #e2e8f0;
+    }
+    body.embedded .main-tab-btn {
+      padding: 6px 12px;
+      gap: 6px;
+      border-radius: 8px;
+      justify-content: center;
+      background: #f1f5f9;
+    }
+    body.embedded .main-tab-btn.active {
+      background: #ffffff;
+      color: #0284c7;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    }
+    body.embedded .main-tab-icon {
+      font-size: 16px;
+    }
+    body.embedded .main-tab-title {
+      font-size: 12.5px;
+    }
+    body.embedded .main-tab-desc {
+      display: none; /* 嵌入模式下隐藏冗余次要文字，保持单行精致胶囊条 */
+    }
+    body.embedded .view-container {
+      margin: 10px auto 0;
+      padding: 0 16px;
+    }
+    body.embedded .metric-cards-grid {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+      overflow-x: auto;
+    }
+    body.embedded .metric-card {
+      flex: 1;
+      min-width: 130px;
+      padding: 8px 12px;
+      gap: 8px;
+      border-radius: 8px;
+    }
+    body.embedded .metric-icon-wrap {
+      width: 32px;
+      height: 32px;
+      font-size: 16px;
+      border-radius: 6px;
+    }
+    body.embedded .metric-num {
+      font-size: 16px;
+    }
+    body.embedded .metric-label {
+      font-size: 10.5px;
+    }
+    body.embedded .market-grid {
+      grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+      gap: 10px;
+    }
+
+    /* 顶部导航 Header */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      background: rgba(255, 255, 255, 0.94);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .brand-area {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 4px 12px var(--accent-blue-glow);
+      flex-shrink: 0;
+      color: #fff;
+    }
+
+    .brand-text h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(90deg, #0284c7, #2563eb);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1.2;
+    }
+
+    .brand-text p {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .nav-btn {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #f8fafc;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .nav-btn:hover {
+      background: #f1f5f9;
+      color: #0f172a;
+      border-color: #94a3b8;
+    }
+
+    .host-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+      background: #f1f5f9;
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-green);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+    }
+
+    /* 用户登录状态组件 */
+    .user-area {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .auth-btn {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: none;
+    }
+
+    .btn-login {
+      background: #ffffff;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+    }
+    .btn-login:hover {
+      background: #f8fafc;
+      color: #0284c7;
+      border-color: #93c5fd;
+    }
+
+    .btn-register {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(2, 132, 199, 0.25);
+    }
+    .btn-register:hover {
+      background: linear-gradient(135deg, #0369a1, #1d4ed8);
+      transform: translateY(-1px);
+    }
+
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      padding: 3px 12px 3px 4px;
+      border-radius: 24px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+      box-shadow: var(--shadow-sm);
+    }
+    .user-pill:hover {
+      border-color: #0284c7;
+      box-shadow: 0 0 12px rgba(2, 132, 199, 0.18);
+      background: #f0f9ff;
+    }
+
+    .user-avatar {
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
+      border-radius: 50%;
+      object-fit: cover;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      border: 1.5px solid #bae6fd;
+      background: #f1f5f9;
+      overflow: hidden;
+    }
+
+    .user-avatar-fallback {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .user-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #0f172a;
+      max-width: 110px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .user-badge {
+      font-size: 10px;
+      padding: 1.5px 7px;
+      border-radius: 10px;
+      background: #f1f5f9;
+      color: #0284c7;
+      font-weight: 700;
+      border: 1px solid #cbd5e1;
+    }
+
+    .user-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 8px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      box-shadow: var(--shadow-lg);
+      width: 230px;
+      z-index: 120;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .user-dropdown.active { display: flex; }
+    .user-dropdown-header { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; background: #f8fafc; }
+    .user-dropdown-item { padding: 10px 14px; font-size: 12px; color: #334155; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.15s; }
+    .user-dropdown-item:hover { background: #f0f9ff; color: #0284c7; }
+    .user-dropdown-item.text-danger { color: #e11d48; border-top: 1px solid #f1f5f9; }
+    .user-dropdown-item.text-danger:hover { background: #fff1f2; color: #be123c; }
+
+    /* ==========================================================================
+       三级独立主 Tab 导航 (物理级切分：市场、本地管理、热榜)
+       ========================================================================== */
+    .main-nav-section {
+      max-width: 1400px;
+      margin: 18px auto 0;
+      padding: 0 24px;
+    }
+
+    .main-tabs-nav {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      background: #ffffff;
+      padding: 6px;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .main-tab-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 12px 18px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      text-align: left;
+    }
+
+    .main-tab-btn:hover {
+      background: #f8fafc;
+      border-color: #e2e8f0;
+    }
+
+    .main-tab-btn.active {
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+      border-color: #7dd3fc;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.12);
+    }
+
+    .main-tab-icon {
+      font-size: 24px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .main-tab-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .main-tab-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .main-tab-btn.active .main-tab-title {
+      color: #0284c7;
+    }
+
+    .main-tab-desc {
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    .main-tab-btn.active .main-tab-desc {
+      color: #0369a1;
+    }
+
+    .tab-counter-badge {
+      background: #0284c7;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      margin-left: 6px;
+    }
+
+    /* 视图切换容器 */
+    .view-container {
+      max-width: 1400px;
+      margin: 16px auto 0;
+      padding: 0 24px;
+    }
+
+    .view-pane {
+      display: none;
+    }
+    .view-pane.active {
+      display: block;
+    }
+
+    /* 搜索栏与分类栏 */
+    .search-box {
+      position: relative;
+      width: 100%;
+      margin-bottom: 12px;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 12px 42px 12px 44px;
+      border-radius: 12px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      color: #0f172a;
+      font-size: 14px;
+      outline: none;
+      transition: all 0.25s ease;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .search-input:focus {
+      border-color: #0284c7;
+      box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+      background: #ffffff;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 16px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .search-clear {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 14px;
+      padding: 4px 8px;
+      border-radius: 50%;
+      display: none;
+      user-select: none;
+    }
+    .search-clear:hover { color: #0f172a; background: #e2e8f0; }
+
+    /* 左右可滑动分类工具栏封装 */
+    .categories-nav-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 12px;
+      width: 100%;
+    }
+
+    .cat-nav-btn {
+      width: 26px;
+      height: 28px;
+      border-radius: 6px;
+      background: #ffffff;
+      border: 1px solid #d1d5db;
+      color: #4b5563;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .cat-nav-btn:hover {
+      background: #f0f9ff;
+      border-color: #bae6fd;
+      color: #0284c7;
+    }
+
+    .categories-bar {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #d1d5db transparent;
+      flex: 1;
+      padding: 2px 0 4px 0;
+      cursor: grab;
+      scroll-behavior: smooth;
+    }
+
+    .categories-bar::-webkit-scrollbar {
+      height: 3px;
+    }
+    .categories-bar::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 2px;
+    }
+    .categories-bar.dragging {
+      cursor: grabbing;
+      user-select: none;
+    }
+
+    .category-btn {
+      padding: 5px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      background: #ffffff;
+      color: #4b5563;
+      border: 1px solid #e5e7eb;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .category-btn:hover {
+      color: #111827;
+      background: #f9fafb;
+      border-color: #d1d5db;
+    }
+
+    .category-btn.active {
+      background: #f0f9ff;
+      color: #0284c7;
+      border-color: #bae6fd;
+      font-weight: 600;
+    }
+
+    /* 插件列表网格 */
+    .market-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 18px;
+    }
+
+    .plugin-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .plugin-card:hover {
+      border-color: #7dd3fc;
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .plugin-card.card-installed {
+      border-color: #86efac;
+      background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 40px);
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .plugin-icon {
+      width: 48px;
+      height: 48px;
+      min-width: 48px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+      border: 1px solid #bae6fd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+      flex-shrink: 0;
+      box-shadow: 0 2px 6px rgba(2, 132, 199, 0.1);
+      font-size: 22px;
+    }
+
+    .plugin-meta {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .plugin-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .version-tag {
+      font-size: 11px;
+      color: #0284c7;
+      background: #e0f2fe;
+      padding: 1px 6px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      font-weight: 600;
+    }
+
+    .plugin-author-row {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 3px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* 状态指示胶囊 (本地 vs 云端) */
+    .status-pill-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+
+    .status-pill-installed {
+      background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+      color: #15803d;
+      border: 1px solid #4ade80;
+      box-shadow: 0 1px 3px rgba(22, 163, 74, 0.2);
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .status-pill-installed::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #16a34a;
+      box-shadow: 0 0 6px rgba(22, 163, 74, 0.9);
+      display: inline-block;
+      animation: pulse-green 2s infinite ease-in-out;
+    }
+    @keyframes pulse-green {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 4px rgba(22, 163, 74, 0.7); }
+      50% { transform: scale(1.25); box-shadow: 0 0 9px rgba(22, 163, 74, 1); }
+    }
+
+    .status-pill-cloud {
+      background: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
+
+    .plugin-desc {
+      font-size: 12.5px;
+      line-height: 1.6;
+      color: #475569;
+      margin-bottom: 12px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      min-height: 38px;
+    }
+
+    .tags-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .tag-chip {
+      font-size: 11px;
+      color: #475569;
+      background: #f1f5f9;
+      padding: 2px 8px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .tag-essential {
+      color: #b45309;
+      background: #fef3c7;
+      border-color: #fde68a;
+      font-weight: 600;
+    }
+
+    .card-footer {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      border-top: 1px solid #f1f5f9;
+      padding-top: 12px;
+    }
+
+    .card-footer-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    .rating-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      background: #fffbeb;
+      border: 1px solid #fef3c7;
+      color: #b45309;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+
+    .action-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    /* 按钮样式 */
+    .btn {
+      padding: 7px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      text-decoration: none;
+    }
+
+    .btn-install {
+      background: linear-gradient(135deg, #0284c7, #0369a1);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+    }
+    .btn-install:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+    }
+
+    .btn-jump-local {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #86efac;
+    }
+    .btn-jump-local:hover {
+      background: #bbf7d0;
+      transform: translateY(-1px);
+    }
+
+    .btn-detail {
+      background: #ffffff;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+    }
+    .btn-detail:hover {
+      background: #f8fafc;
+      color: #0284c7;
+      border-color: #93c5fd;
+    }
+
+    .btn-badge {
+      background: #ffffff;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+      padding: 7px 10px;
+    }
+    .btn-badge:hover {
+      background: #f8fafc;
+      color: #0284c7;
+      border-color: #93c5fd;
+    }
+
+    /* ==========================================================================
+       Tab 2: 本地插件管理专属视图 (Local Manager View)
+       ========================================================================== */
+    .metric-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .metric-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .metric-icon-wrap {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: #f0f9ff;
+      border: 1px solid #bae6fd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      color: #0284c7;
+      flex-shrink: 0;
+    }
+
+    .metric-content {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .metric-num {
+      font-size: 20px;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.2;
+    }
+
+    .metric-label {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    .local-toolbar {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .local-toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .local-toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .cb-label {
+      font-size: 12px;
+      color: #334155;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .cb-label input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #0284c7;
+      cursor: pointer;
+    }
+
+    .btn-danger-clean {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: #ffffff;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-danger-clean:hover:not(:disabled) {
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
+    }
+    .btn-danger-clean:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .local-plugin-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px; /* 严格统一 8px 间距，消除杂乱空洞感 */
+    }
+
+    .local-plugin-card {
+      background: #ffffff;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .local-plugin-card:hover {
+      border-color: #7dd3fc;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.08);
+      background: #fbfdff;
+    }
+
+    .local-plugin-card.selected {
+      background: #f0f9ff;
+      border-color: #bae6fd;
+    }
+
+    .local-card-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .local-card-icon {
+      width: 38px;
+      height: 38px;
+      min-width: 38px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+      border: 1px solid #bae6fd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .local-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .local-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 2px;
+      flex-wrap: wrap;
+    }
+
+    .local-card-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .local-card-id {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      color: #64748b;
+      background: #f1f5f9;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .local-card-desc {
+      font-size: 11.5px;
+      color: #64748b;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 540px;
+    }
+
+    .local-card-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .local-plugin-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px 20px;
+      border-bottom: 1px solid #f1f5f9;
+      transition: background 0.15s ease;
+    }
+    .local-plugin-row:last-child {
+      border-bottom: none;
+    }
+    .local-plugin-row:hover {
+      background: #f8fafc;
+    }
+    .local-plugin-row.selected {
+      background: #f0f9ff;
+    }
+
+    .local-row-main {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .local-row-icon {
+      width: 42px;
+      height: 42px;
+      min-width: 42px;
+      border-radius: 10px;
+      background: #e0f2fe;
+      border: 1px solid #bae6fd;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .local-row-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .local-row-title-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+
+    .local-row-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .local-row-id {
+      font-family: monospace;
+      font-size: 11px;
+      color: #64748b;
+      background: #f1f5f9;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    .local-row-desc {
+      font-size: 12px;
+      color: #64748b;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-bottom: 4px;
+    }
+
+    .local-row-path {
+      font-size: 11px;
+      color: #94a3b8;
+      font-family: monospace;
+    }
+
+    .local-row-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* 热启停开关按钮 */
+    .btn-toggle-switch {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 11.5px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn-toggle-switch.on {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #86efac;
+    }
+    .btn-toggle-switch.on:hover {
+      background: #fee2e2;
+      color: #b91c1c;
+      border-color: #fca5a5;
+    }
+
+    .btn-toggle-switch.off {
+      background: #f1f5f9;
+      color: #64748b;
+      border: 1px solid #cbd5e1;
+    }
+    .btn-toggle-switch.off:hover {
+      background: #dcfce7;
+      color: #15803d;
+      border-color: #86efac;
+    }
+
+    .toggle-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .btn-toggle-switch.on .toggle-dot {
+      background: #16a34a;
+      box-shadow: 0 0 7px rgba(22, 163, 74, 0.9);
+      animation: pulse-green 2s infinite ease-in-out;
+    }
+    .btn-toggle-switch.off .toggle-dot {
+      background: #9ca3af;
+      box-shadow: none;
+    }
+
+    /* ==========================================================================
+       Tab 3: 权威热榜广场 (Leaderboard View - Modern High-End Redesign)
+       ========================================================================== */
+    .leaderboard-hero-banner {
+      background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #fdf4ff 100%);
+      border: 1px solid #bae6fd;
+      border-radius: 16px;
+      padding: 16px 22px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      box-shadow: 0 4px 20px -2px rgba(2, 132, 199, 0.08);
+      position: relative;
+      overflow: hidden;
+    }
+    .leaderboard-hero-left {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .leaderboard-hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #0369a1;
+      background: rgba(255, 255, 255, 0.85);
+      padding: 2px 8px;
+      border-radius: 12px;
+      border: 1px solid #bae6fd;
+      width: fit-content;
+    }
+    .pulse-dot-live {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #16a34a;
+      box-shadow: 0 0 6px rgba(22, 163, 74, 0.8);
+      display: inline-block;
+      animation: pulse-dot-anim 2s infinite ease-in-out;
+    }
+    @keyframes pulse-dot-anim {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.7; }
+    }
+    .leaderboard-hero-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #0c4a6e;
+      margin: 2px 0 1px 0;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .leaderboard-hero-desc {
+      font-size: 12px;
+      color: #0369a1;
+      margin: 0;
+    }
+    .btn-sync-official {
+      background: #ffffff;
+      color: #0284c7;
+      border: 1.5px solid #bae6fd;
+      padding: 8px 18px;
+      border-radius: 24px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 10px rgba(2, 132, 199, 0.12);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .btn-sync-official:hover {
+      background: #f0f9ff;
+      border-color: #0284c7;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.22);
+    }
+    .sync-icon.rotating {
+      animation: spin 0.8s linear infinite;
+      display: inline-block;
+    }
+
+    /* Subnav 胶囊分类切换栏 */
+    .leaderboard-subnav-container {
+      margin-bottom: 14px;
+      width: 100%;
+    }
+    .leaderboard-subnav {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 2px 0 6px;
+      scrollbar-width: none;
+    }
+    .leaderboard-subnav::-webkit-scrollbar { display: none; }
+    .subrank-btn {
+      padding: 7px 18px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      background: #ffffff;
+      color: #475569;
+      border: 1px solid #e2e8f0;
+      transition: all 0.2s;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+      flex-shrink: 0;
+    }
+    .subrank-btn:hover {
+      color: #0284c7;
+      border-color: #bae6fd;
+      background: #f8fafc;
+    }
+    .subrank-btn.active {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      border-color: transparent;
+      box-shadow: 0 3px 12px rgba(2, 132, 199, 0.28);
+    }
+
+    /* 排行榜列表与卡片 */
+    .leaderboard-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding-bottom: 90px; /* 彻底杜绝底部控制台遮挡 */
+    }
+
+    .rank-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+      position: relative;
+    }
+    .rank-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 22px -4px rgba(15, 23, 42, 0.09);
+      border-color: #93c5fd;
+    }
+
+    /* 前三甲高贵光环样式 */
+    .rank-card.rank-gold {
+      background: linear-gradient(135deg, #fffdf2 0%, #ffffff 65%);
+      border: 1.5px solid #fbbf24;
+      box-shadow: 0 4px 18px rgba(245, 158, 11, 0.12);
+    }
+    .rank-card.rank-silver {
+      background: linear-gradient(135deg, #f8fafc 0%, #ffffff 65%);
+      border: 1.5px solid #cbd5e1;
+      box-shadow: 0 4px 18px rgba(148, 163, 184, 0.12);
+    }
+    .rank-card.rank-bronze {
+      background: linear-gradient(135deg, #fff8f0 0%, #ffffff 65%);
+      border: 1.5px solid #fdba74;
+      box-shadow: 0 4px 18px rgba(234, 88, 12, 0.1);
+    }
+
+    /* 排名微章 (精致小巧 36px) */
+    .rank-badge-wrap {
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13.5px;
+      font-weight: 800;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+    .badge-gold {
+      background: linear-gradient(135deg, #fef08a 0%, #f59e0b 100%);
+      color: #78350f;
+      border: 1px solid #f59e0b;
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.28);
+    }
+    .badge-silver {
+      background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%);
+      color: #334155;
+      border: 1px solid #94a3b8;
+      box-shadow: 0 2px 8px rgba(148, 163, 184, 0.22);
+    }
+    .badge-bronze {
+      background: linear-gradient(135deg, #ffedd5 0%, #fb923c 100%);
+      color: #7c2d12;
+      border: 1px solid #ea580c;
+      box-shadow: 0 2px 8px rgba(234, 88, 12, 0.22);
+    }
+    .badge-normal {
+      background: #f1f5f9;
+      color: #64748b;
+      border: 1px solid #e2e8f0;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .rank-content-main {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .rank-meta {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .rank-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+    .rank-plugin-name {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 480px;
+    }
+    .rank-tag-version {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #0284c7;
+      background: #e0f2fe;
+      padding: 1.5px 6px;
+      border-radius: 4px;
+      border: 1px solid #bae6fd;
+      flex-shrink: 0;
+    }
+    .rank-tag-essential {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #b45309;
+      background: #fef3c7;
+      padding: 1.5px 7px;
+      border-radius: 4px;
+      border: 1px solid #fde68a;
+      flex-shrink: 0;
+    }
+    .rank-tag-installed {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #15803d;
+      background: #dcfce7;
+      padding: 1.5px 7px;
+      border-radius: 4px;
+      border: 1px solid #86efac;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .rank-desc {
+      font-size: 12px;
+      color: #64748b;
+      line-height: 1.5;
+      margin-bottom: 6px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .rank-stats-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 11.5px;
+    }
+    .rank-stat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2.5px 8px;
+      border-radius: 6px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #475569;
+      white-space: nowrap;
+      font-size: 11.5px;
+      line-height: 1.2;
+    }
+    .rank-stat-pill strong {
+      color: #0f172a;
+      font-weight: 600;
+    }
+    .rank-stat-pill.rating {
+      background: #fffbeb;
+      border-color: #fde68a;
+      color: #b45309;
+      font-weight: 700;
+    }
+
+    /* 右侧操作按钮 */
+    .rank-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex-shrink: 0;
+      align-items: flex-end;
+    }
+    .btn-rank-install {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.25);
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn-rank-install:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+      background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+    }
+    .btn-rank-manage {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #86efac;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .btn-rank-manage:hover {
+      background: #bbf7d0;
+      transform: translateY(-1px);
+    }
+    .btn-rank-detail {
+      background: #ffffff;
+      color: #475569;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      padding: 4px 12px;
+      font-size: 11.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-rank-detail:hover {
+      background: #f8fafc;
+      color: #0284c7;
+      border-color: #93c5fd;
+    }
+
+
+    /* 底部实时控制台 Terminal Drawer */
+    .terminal-drawer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: #ffffff;
+      border-top: 1px solid #cbd5e1;
+      box-shadow: 0 -8px 25px rgba(15, 23, 42, 0.1);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      transform: translateY(calc(100% - 40px));
+    }
+    .terminal-drawer.open {
+      transform: translateY(0);
+    }
+
+    .terminal-header {
+      height: 40px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .terminal-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #0284c7;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .terminal-body {
+      height: 200px;
+      padding: 16px;
+      background: #090d16;
+      font-family: "Fira Code", Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #94a3b8;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+
+    .log-line { margin-bottom: 4px; }
+    .log-success { color: #34d399; font-weight: bold; }
+    .log-error { color: #fb7185; font-weight: bold; }
+    .log-highlight { color: #38bdf8; }
+
+    /* 浮动提示 Toast */
+    .toast-notice {
+      position: fixed;
+      bottom: 50px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #0f172a;
+      color: #ffffff;
+      padding: 10px 22px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 600;
+      z-index: 300;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toast-notice.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* 模态框通用 */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.5);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 20px;
+    }
+    .modal-overlay.active { display: flex; }
+
+    .modal-content {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      max-width: 640px;
+      width: 100%;
+      padding: 24px;
+      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.18);
+      position: relative;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 12px;
+    }
+
+    .modal-header h3 { font-size: 16px; color: #0284c7; display: flex; align-items: center; gap: 8px; }
+    .modal-close { cursor: pointer; font-size: 22px; color: #94a3b8; background: none; border: none; line-height: 1; }
+    .modal-close:hover { color: #0f172a; }
+  
+    /* 指标条新样式 */
+    .metric-summary-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px 14px;
+      margin-bottom: 10px;
+    }
+    .metric-summary-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+    .metric-label {
+      color: #6b7280;
+    }
+    .metric-val {
+      font-weight: 700;
+      color: #111827;
+    }
+    .metric-val.text-green { color: #15803d; }
+    .metric-val.text-muted { color: #6b7280; }
+    .metric-divider {
+      width: 1px;
+      height: 14px;
+      background: #e5e7eb;
+    }
+    .metric-badge-ok {
+      font-size: 11px;
+      font-weight: 600;
+      color: #15803d;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    /* 工具栏样式优化 */
+    .local-toolbar {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .selected-badge {
+      font-size: 11px;
+      background: #f0f9ff;
+      color: #0284c7;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+      border: 1px solid #bae6fd;
+    }
+    .btn-clean-action {
+      background: #ffffff;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-clean-action:hover:not(:disabled) {
+      background: #fef2f2;
+      border-color: #f87171;
+    }
+    .btn-clean-action:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .local-search-input {
+      padding: 4px 10px;
+      width: 160px;
+      font-size: 11.5px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      outline: none;
+    }
+    .local-search-input:focus {
+      border-color: #0284c7;
+    }
+    .btn-subtle {
+      padding: 4px 9px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      background: #ffffff;
+      color: #374151;
+      font-size: 11.5px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .btn-subtle:hover {
+      background: #f9fafb;
+      border-color: #9ca3af;
+      color: #111827;
+    }
+
+    /* 本地插件卡片极其精致化 (高度规整、单行无重叠、白底黑灰线) */
+    .local-plugin-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .local-plugin-card {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 52px;
+      transition: all 0.15s ease;
+    }
+    .local-plugin-card:hover {
+      border-color: #bae6fd;
+      background: #fbfdff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+    .local-plugin-card.selected {
+      background: #f0f9ff;
+      border-color: #bae6fd;
+    }
+    .local-card-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+    }
+    .local-card-icon {
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      border-radius: 6px;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .local-card-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .local-card-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+    .local-card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #111827;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .version-tag {
+      font-size: 10.5px;
+      color: #4b5563;
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      padding: 0 5px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .local-author-tag {
+      font-size: 10.5px;
+      color: #9ca3af;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 0;
+    }
+    .local-card-desc {
+      font-size: 11px;
+      color: #6b7280;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      line-height: 1.3;
+    }
+    .local-card-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    /* 运行状态单键切换胶囊 */
+    .btn-toggle-switch {
+      padding: 3px 10px;
+      border-radius: 14px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-toggle-switch.on {
+      background: #ffffff;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    }
+    .btn-toggle-switch.on:hover {
+      background: #fef2f2;
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+    .btn-toggle-switch.off {
+      background: #ffffff;
+      color: #6b7280;
+      border: 1px solid #e5e7eb;
+    }
+    .btn-toggle-switch.off:hover {
+      background: #f0fdf4;
+      color: #15803d;
+      border-color: #bbf7d0;
+    }
+    .toggle-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .btn-toggle-switch.on .toggle-dot {
+      background: #16a34a;
+      box-shadow: 0 0 7px rgba(22, 163, 74, 0.9);
+      animation: pulse-green 2s infinite ease-in-out;
+    }
+    .btn-toggle-switch.off .toggle-dot {
+      background: #9ca3af;
+      box-shadow: none;
+    }
+
+    .btn-sm {
+      padding: 3px 8px;
+      font-size: 11px;
+    }
+    .btn-sm.text-danger {
+      color: #dc2626;
+      border-color: #fee2e2;
+    }
+    .btn-sm.text-danger:hover {
+      background: #fef2f2;
+      border-color: #fca5a5;
+    }
+
+  
+    /* 指标条新样式 */
+    .metric-summary-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px 14px;
+      margin-bottom: 10px;
+    }
+    .metric-summary-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+    .metric-label {
+      color: #6b7280;
+    }
+    .metric-val {
+      font-weight: 700;
+      color: #111827;
+    }
+    .metric-val.text-green { color: #15803d; }
+    .metric-val.text-muted { color: #6b7280; }
+    .metric-divider {
+      width: 1px;
+      height: 14px;
+      background: #e5e7eb;
+    }
+    .metric-badge-ok {
+      font-size: 11px;
+      font-weight: 600;
+      color: #15803d;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    /* 工具栏样式优化 */
+    .local-toolbar {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .selected-badge {
+      font-size: 11px;
+      background: #f0f9ff;
+      color: #0284c7;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+      border: 1px solid #bae6fd;
+    }
+    .btn-clean-action {
+      background: #ffffff;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-clean-action:hover:not(:disabled) {
+      background: #fef2f2;
+      border-color: #f87171;
+    }
+    .btn-clean-action:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .local-search-input {
+      padding: 4px 10px;
+      width: 160px;
+      font-size: 11.5px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      outline: none;
+    }
+    .local-search-input:focus {
+      border-color: #0284c7;
+    }
+    .btn-subtle {
+      padding: 4px 9px;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      background: #ffffff;
+      color: #374151;
+      font-size: 11.5px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .btn-subtle:hover {
+      background: #f9fafb;
+      border-color: #9ca3af;
+      color: #111827;
+    }
+
+    /* 本地插件卡片极其精致化 (高度规整、单行无重叠、白底黑灰线) */
+    .local-plugin-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .local-plugin-card {
+      background: #ffffff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 52px;
+      transition: all 0.15s ease;
+    }
+    .local-plugin-card:hover {
+      border-color: #bae6fd;
+      background: #fbfdff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+    .local-plugin-card.selected {
+      background: #f0f9ff;
+      border-color: #bae6fd;
+    }
+    .local-card-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      min-width: 0;
+    }
+    .local-card-icon {
+      width: 32px;
+      height: 32px;
+      min-width: 32px;
+      border-radius: 6px;
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .local-card-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .local-card-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: nowrap;
+      overflow: hidden;
+    }
+    .local-card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #111827;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .version-tag {
+      font-size: 10.5px;
+      color: #4b5563;
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      padding: 0 5px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .local-author-tag {
+      font-size: 10.5px;
+      color: #9ca3af;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex-shrink: 0;
+    }
+    .local-card-desc {
+      font-size: 11px;
+      color: #6b7280;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      line-height: 1.3;
+    }
+    .local-card-right {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    /* 运行状态单键切换胶囊 */
+    .btn-toggle-switch {
+      padding: 3px 10px;
+      border-radius: 14px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-toggle-switch.on {
+      background: #ffffff;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    }
+    .btn-toggle-switch.on:hover {
+      background: #fef2f2;
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+    .btn-toggle-switch.off {
+      background: #ffffff;
+      color: #6b7280;
+      border: 1px solid #e5e7eb;
+    }
+    .btn-toggle-switch.off:hover {
+      background: #f0fdf4;
+      color: #15803d;
+      border-color: #bbf7d0;
+    }
+    .toggle-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .btn-toggle-switch.on .toggle-dot {
+      background: #16a34a;
+      box-shadow: 0 0 7px rgba(22, 163, 74, 0.9);
+      animation: pulse-green 2s infinite ease-in-out;
+    }
+    .btn-toggle-switch.off .toggle-dot {
+      background: #9ca3af;
+      box-shadow: none;
+    }
+
+    .btn-sm {
+      padding: 3px 8px;
+      font-size: 11px;
+    }
+    .btn-sm.text-danger {
+      color: #dc2626;
+      border-color: #fee2e2;
+    }
+    .btn-sm.text-danger:hover {
+      background: #fef2f2;
+      border-color: #fca5a5;
+    }
+
+  
+    /* 分页控制器与性能加速引擎 */
+    .market-pagination-bar {
+      margin-top: 24px;
+      padding: 14px 20px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+    }
+    .pagination-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 13px;
+      color: #475569;
+      font-weight: 500;
+    }
+    .page-size-selector select {
+      padding: 5px 10px;
+      font-size: 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      background: #f8fafc;
+      color: #334155;
+      outline: none;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .page-size-selector select:hover {
+      border-color: #0284c7;
+      background: #ffffff;
+    }
+    .pagination-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .page-btn {
+      min-width: 34px;
+      height: 34px;
+      padding: 0 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #334155;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+    .page-btn:hover:not(:disabled) {
+      background: #e0f2fe;
+      border-color: #38bdf8;
+      color: #0369a1;
+      transform: translateY(-1px);
+    }
+    .page-btn.active {
+      background: #0284c7;
+      border-color: #0284c7;
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35);
+    }
+    .page-btn:disabled {
+      opacity: 0.38;
+      cursor: not-allowed;
+      background: #f1f5f9;
+      border-color: #e2e8f0;
+      color: #94a3b8;
+      transform: none;
+    }
+    .page-ellipsis {
+      padding: 0 4px;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+    .page-jump-box {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: 8px;
+      font-size: 12px;
+      color: #64748b;
+    }
+    .page-jump-input {
+      width: 48px;
+      height: 32px;
+      padding: 0 6px;
+      text-align: center;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #1e293b;
+      outline: none;
+    }
+    .page-jump-input:focus {
+      border-color: #0284c7;
+    }
+    .page-jump-btn {
+      height: 32px;
+      padding: 0 10px;
+      font-size: 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      background: #f8fafc;
+      color: #334155;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .page-jump-btn:hover {
+      background: #0284c7;
+      border-color: #0284c7;
+      color: #ffffff;
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- 顶部 Header -->
+  <header>
+    <div class="brand-area">
+      <div class="logo-icon">⚡</div>
+      <div class="brand-text">
+        <h1>DeepSeek Harness 插件市场</h1>
+        <p>Stream Hub · 全生命周期管理与生态中心</p>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button class="nav-btn" onclick="requestFullScreen()" title="展开全屏视窗">
+        <span>⛶</span><span>全屏视窗</span>
+      </button>
+      <button class="nav-btn" onclick="openProtocolModal()" title="测试 dsh:// 一键安装协议">
+        <span>🔗</span><span>协议调试</span>
+      </button>
+      <button class="nav-btn" onclick="refreshAll()" title="刷新全量数据">
+        <span>🔄</span><span>刷新</span>
+      </button>
+
+      <div class="host-status" id="hostStatus">
+        <span class="status-dot"></span>
+        <span id="profileText">DSH: 已连接 (Web Profile)</span>
+      </div>
+
+      <!-- 用户登录态控件 -->
+      <div class="user-area" id="userArea">
+        <button class="auth-btn btn-login" onclick="openAuthModal('login')">🔑 登录</button>
+        <button class="auth-btn btn-register" onclick="openAuthModal('register')">✨ 注册</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 核心三大独立 Tab 导航 (物理级切分) -->
+  <div class="main-nav-section">
+    <div class="main-tabs-nav">
+      <button class="main-tab-btn active" id="btnTabMarket" onclick="switchMainTab('market')">
+        <span class="main-tab-icon">🌐</span>
+        <div class="main-tab-text">
+          <span class="main-tab-title">插件生态市场</span>
+          <span class="main-tab-desc">全网与官方开源插件探索检索</span>
+        </div>
+      </button>
+
+      <button class="main-tab-btn" id="btnTabLocal" onclick="switchMainTab('local')">
+        <span class="main-tab-icon">💻</span>
+        <div class="main-tab-text">
+          <span class="main-tab-title">
+            本地插件管理
+            <span class="tab-counter-badge" id="tabLocalBadge">0</span>
+          </span>
+          <span class="main-tab-desc">本地已装 · 单键热启停与卸载</span>
+        </div>
+      </button>
+
+      <button class="main-tab-btn" id="btnTabLeaderboard" onclick="switchMainTab('leaderboard')">
+        <span class="main-tab-icon">🏆</span>
+        <div class="main-tab-text">
+          <span class="main-tab-title">官网热榜广场</span>
+          <span class="main-tab-desc">deepseek.stream 权威排行</span>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <!-- 视图容器 -->
+  <div class="view-container">
+
+    <!-- ======================================================================
+         View 1: 插件生态市场 (Hub 探索中心)
+         ====================================================================== -->
+    <div class="view-pane active" id="viewMarket">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="marketSearchInput" class="search-input" placeholder="输入插件名称、ID、简介、作者或关键词检索全网生态..." oninput="handleMarketSearch()">
+        <span class="search-clear" id="marketSearchClear" onclick="clearMarketSearch()">✕</span>
+      </div>
+
+      <div class="categories-nav-wrapper">
+        <button class="cat-nav-btn cat-nav-left" id="btnCatScrollLeft" onclick="scrollCategoryBar(-200)" title="向左滑动分类">‹</button>
+        <div class="categories-bar" id="marketCategoriesBar">
+          <button class="category-btn active" data-cat="all" onclick="filterMarketCategory('all')">🌟 全部分类</button>
+          <button class="category-btn" data-cat="security" onclick="filterMarketCategory('security')">🛡️ 安全工具</button>
+          <button class="category-btn" data-cat="tools" onclick="filterMarketCategory('tools')">⚡ 实用工具</button>
+          <button class="category-btn" data-cat="coding" onclick="filterMarketCategory('coding')">💻 开发调试</button>
+          <button class="category-btn" data-cat="agent" onclick="filterMarketCategory('agent')">🤖 智囊Agent</button>
+          <button class="category-btn" data-cat="essential" onclick="filterMarketCategory('essential')">⭐ 必装精选</button>
+          <button class="category-btn" data-cat="theme" onclick="filterMarketCategory('theme')">🎨 界面主题</button>
+        </div>
+        <button class="cat-nav-btn cat-nav-right" id="btnCatScrollRight" onclick="scrollCategoryBar(200)" title="向右滑动分类">›</button>
+      </div>
+
+      <div style="font-size: 12px; color: #64748b; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+        <span id="marketFilterSummary">正在加载插件生态...</span>
+        <span style="font-size: 11px; color: #94a3b8;">绿色边框卡片代表「本地已装载」项</span>
+      </div>
+
+      <div class="market-grid" id="marketGrid">
+        <div style="grid-column: 1/-1; text-align: center; padding: 60px; color: #64748b;">
+          ⚡ 正在加载生态插件清单...
+        </div>
+      </div>
+
+      <!-- 插件生态高性能翻页控制器 -->
+      <div class="market-pagination-bar" id="marketPaginationBar" style="display: none;">
+        <div class="pagination-info">
+          <span id="pageDetailText">正在计算分页...</span>
+          <div class="page-size-selector">
+            <span style="font-size: 12px; color: #64748b; margin-right: 4px;">每页显示:</span>
+            <select id="marketPageSizeSelect" onchange="handleMarketPageSizeChange(this.value)">
+              <option value="18" selected>18 款 / 页 (流畅推荐)</option>
+              <option value="36">36 款 / 页</option>
+              <option value="60">60 款 / 页</option>
+              <option value="9999">全量展示 (近 400 款)</option>
+            </select>
+          </div>
+        </div>
+        <div class="pagination-controls" id="paginationControls">
+          <!-- 动态注入 上一页、页码按钮、下一页、跳转 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         View 2: 本地插件管理 (Local Manager)
+         ====================================================================== -->
+    <div class="view-pane" id="viewLocal">
+      <!-- 本地插件紧凑指标条 (极简、白底、细线) -->
+      <div class="metric-summary-bar">
+        <div class="metric-summary-item">
+          <span class="metric-label">📦 本地插件总数:</span>
+          <span class="metric-val" id="metricTotalInstalled">0</span>
+        </div>
+        <div class="metric-divider"></div>
+        <div class="metric-summary-item">
+          <span class="metric-label">🟢 运行中:</span>
+          <span class="metric-val text-green" id="metricActiveCount">0</span>
+        </div>
+        <div class="metric-divider"></div>
+        <div class="metric-summary-item">
+          <span class="metric-label">⚪ 已停用:</span>
+          <span class="metric-val text-muted" id="metricDisabledCount">0</span>
+        </div>
+        <div class="metric-divider"></div>
+        <div class="metric-summary-item">
+          <span class="metric-label">🚑 运行时自愈状态:</span>
+          <span class="metric-badge-ok">健康就绪</span>
+        </div>
+      </div>
+
+      <!-- 本地管理控制栏 (单行紧凑对齐) -->
+      <div class="local-toolbar">
+        <div class="local-toolbar-left">
+          <label class="cb-label">
+            <input type="checkbox" id="cbLocalSelectAll" onchange="toggleSelectAllLocal(this.checked)">
+            <span>全选</span>
+          </label>
+          <span class="selected-badge" id="localSelectedBadge">已选 0 项</span>
+          <button class="btn-clean-action" id="btnBatchUninstall" onclick="executeBatchCleanUninstall()" disabled>
+            🗑️ 彻底粉碎卸载所选
+          </button>
+        </div>
+
+        <div class="local-toolbar-right">
+          <input type="text" id="localSearchInput" placeholder="快速过滤本地扩展..." class="search-input local-search-input" oninput="filterLocalPlugins()">
+          <button class="btn-subtle" onclick="refreshInstalled()" title="重新扫描本地已装载目录">🔄 刷新</button>
+          <button class="btn-subtle" onclick="triggerManualRestart()" title="主动发送热重启信号">⚡ 热重启</button>
+          <button class="btn-subtle" onclick="doRescueBundles()" title="深度自愈 profile 完整性">🚑 自愈体检</button>
+        </div>
+      </div>
+
+      <!-- 本地插件列表 -->
+      <div class="local-plugin-list" id="localPluginsList">
+        <div style="text-align: center; padding: 40px; color: #64748b;">
+          正在扫描本地已安装扩展...
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================================================================
+         View 3: 官网热榜广场 (Leaderboard View)
+         ====================================================================== -->
+    <div class="view-pane" id="viewLeaderboard">
+      <div class="leaderboard-hero-banner">
+        <div class="leaderboard-hero-left">
+          <div class="leaderboard-hero-badge">
+            <span class="pulse-dot-live"></span>
+            <span>官方生态排行榜 · 实时穿透在线</span>
+          </div>
+          <h2 class="leaderboard-hero-title">🏆 deepseek.stream 官方开源生态榜</h2>
+          <p class="leaderboard-hero-desc">100% 实时穿透抓取官方真实下载量、评测分与周热榜数据 · 持续动态更新</p>
+        </div>
+        <div>
+          <button id="btnSyncOfficial" onclick="triggerOfficialSync()" class="btn-sync-official" title="从 deepseek.stream 实时拉取最新插件库与评测数据">
+            <span id="syncIcon" class="sync-icon">🔄</span>
+            <span>立即同步官网数据</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="leaderboard-subnav-container">
+        <div class="leaderboard-subnav" id="leaderboardSubnav">
+          <button class="subrank-btn active" data-sub="hot" onclick="switchSubRank('hot')">🔥 热门总榜</button>
+          <button class="subrank-btn" data-sub="essential" onclick="switchSubRank('essential')">⭐ 必装精选</button>
+          <button class="subrank-btn" data-sub="trending" onclick="switchSubRank('trending')">⚡ 飙升新星</button>
+          <button class="subrank-btn" data-sub="newest" onclick="switchSubRank('newest')">🕒 最新发布</button>
+          <button class="subrank-btn" data-sub="downloads" onclick="switchSubRank('downloads')">📥 累计下载</button>
+        </div>
+      </div>
+
+      <div class="leaderboard-list" id="leaderboardList">
+        <div style="text-align: center; padding: 50px 20px; color: #64748b;">
+          <div class="spinner" style="width: 28px; height: 28px; border: 3px solid #e2e8f0; border-top-color: #0284c7; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px;"></div>
+          正在从 deepseek.stream 实时加载最新榜单...
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 底部实时安装控制台 -->
+  <div class="terminal-drawer" id="terminalDrawer">
+    <div class="terminal-header" onclick="toggleTerminal()">
+      <div class="terminal-title">
+        <span>📟</span>
+        <span>装载与热启停控制台 (Installation & Lifecycle Terminal)</span>
+      </div>
+      <div style="font-size: 12px; color: #64748b;">
+        <span id="terminalToggleTip">点击展开 / 收起 ▲</span>
+      </div>
+    </div>
+    <div class="terminal-body" id="terminalBody">
+      <div class="log-line">⚡ DeepSeek Harness 本地运行时监控就绪。</div>
+      <div class="log-line">⚡ dsh:// 桌面客户端一键联动协议就绪。</div>
+    </div>
+  </div>
+
+  <!-- 悬浮 Toast 提示 -->
+  <div class="toast-notice" id="toastNotice">
+    <span id="toastIcon">⚡</span>
+    <span id="toastText">操作已完成</span>
+  </div>
+
+  <!-- 详情弹窗 -->
+  <div class="modal-overlay" id="detailModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="detailTitle">插件详情</h3>
+        <button class="modal-close" onclick="closeDetailModal()">×</button>
+      </div>
+      <div id="detailBody"></div>
+    </div>
+  </div>
+
+  <!-- 协议调试弹窗 -->
+  <div class="modal-overlay" id="protocolModal">
+    <div class="modal-content" style="max-width: 540px;">
+      <div class="modal-header">
+        <h3>🔗 dsh:// 桌面协议调试器</h3>
+        <button class="modal-close" onclick="closeProtocolModal()">×</button>
+      </div>
+      <p style="font-size: 12.5px; color: #475569; margin-bottom: 14px;">
+        DeepSeek Harness 支持直接通过系统级自定义协议 URL 进行单键无感快速安装。
+      </p>
+      <input type="text" id="protocolInput" class="search-input" style="margin-bottom: 12px;" value="dsh://plugin/install?id=dsh-infinite-gen-4">
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-detail" onclick="closeProtocolModal()">关闭</button>
+        <button class="btn btn-install" onclick="executeProtocolDebug()">🚀 测试唤起协议</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 用户登录模态弹窗 -->
+  <div class="modal-overlay" id="authModal">
+    <div class="modal-content" style="max-width: 420px;">
+      <div class="modal-header">
+        <h3 id="authModalTitle">🔑 登录 DeepSeek 生态</h3>
+        <button class="modal-close" onclick="closeAuthModal()">×</button>
+      </div>
+      <div style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
+        <button id="tabAuthLogin" class="btn btn-detail" style="flex: 1;" onclick="switchAuthTab('login')">账号登录</button>
+        <button id="tabAuthRegister" class="btn btn-detail" style="flex: 1;" onclick="switchAuthTab('register')">免费注册</button>
+      </div>
+      <form id="authForm" onsubmit="handleAuthSubmit(event)">
+        <div style="margin-bottom: 12px;">
+          <label style="display: block; font-size: 12px; color: #475569; margin-bottom: 6px;">邮箱或用户名</label>
+          <input type="text" id="authEmail" required class="search-input" placeholder="输入邮箱或用户名">
+        </div>
+        <div id="authNameField" style="margin-bottom: 12px; display: none;">
+          <label style="display: block; font-size: 12px; color: #475569; margin-bottom: 6px;">开发者显示昵称</label>
+          <input type="text" id="authName" class="search-input" placeholder="开发者昵称">
+        </div>
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; font-size: 12px; color: #475569; margin-bottom: 6px;">密码</label>
+          <input type="password" id="authPassword" required class="search-input" placeholder="输入密码">
+        </div>
+        <div id="authError" style="color: #e11d48; font-size: 12px; margin-bottom: 12px; display: none;"></div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="btn btn-detail" onclick="closeAuthModal()">取消</button>
+          <button type="submit" id="authSubmitBtn" class="btn btn-register">确认登录</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 全局状态管理
+    // =========================================================================
+    let catalogPlugins = [];
+    let installedMap = {};
+    let currentMainTab = 'market';
+    let currentMarketCat = 'all';
+    let currentSubRank = 'hot';
+    let hostInfo = null;
+    let currentMarketPage = 1;
+    let marketPageSize = 18;
+
+    const terminalDrawer = document.getElementById('terminalDrawer');
+    const terminalBody = document.getElementById('terminalBody');
+
+    function appendLog(msg, type = 'normal') {
+      const line = document.createElement('div');
+      line.className = 'log-line' + (type === 'success' ? ' log-success' : type === 'error' ? ' log-error' : type === 'highlight' ? ' log-highlight' : '');
+      line.textContent = (new Date().toLocaleTimeString()) + ' ' + msg;
+      terminalBody.appendChild(line);
+      terminalBody.scrollTop = terminalBody.scrollHeight;
+    }
+
+    function toggleTerminal() {
+      terminalDrawer.classList.toggle('open');
+      const tip = document.getElementById('terminalToggleTip');
+      if (tip) tip.textContent = terminalDrawer.classList.contains('open') ? '点击收起 ▼' : '点击展开 ▲';
+    }
+
+    function showToast(text, icon = '⚡', duration = 3000) {
+      const t = document.getElementById('toastNotice');
+      document.getElementById('toastText').textContent = text;
+      document.getElementById('toastIcon').textContent = icon;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), duration);
+    }
+
+    // =========================================================================
+    // 三大主 Tab 切换逻辑
+    // =========================================================================
+    function switchMainTab(tabName) {
+      currentMainTab = tabName;
+      document.querySelectorAll('.main-tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.view-pane').forEach(p => p.classList.remove('active'));
+
+      if (tabName === 'market') {
+        document.getElementById('btnTabMarket').classList.add('active');
+        document.getElementById('viewMarket').classList.add('active');
+        renderMarketList();
+        fetchInstalled().then(() => renderMarketList());
+      } else if (tabName === 'local') {
+        document.getElementById('btnTabLocal').classList.add('active');
+        document.getElementById('viewLocal').classList.add('active');
+        renderLocalList();
+        fetchInstalled().then(() => renderLocalList());
+      } else if (tabName === 'leaderboard') {
+        document.getElementById('btnTabLeaderboard').classList.add('active');
+        document.getElementById('viewLeaderboard').classList.add('active');
+        renderLeaderboardList();
+        fetchInstalled().then(() => renderLeaderboardList());
+      }
+    }
+
+    // =========================================================================
+    // 数据同步与拉取
+    // =========================================================================
+    async function init() {
+      if (window.location.search.includes('embedded=1')) {
+        document.body.classList.add('embedded');
+      }
+      await refreshAll(true);
+      initAuthStatus();
+    }
+
+    async function refreshAll(force = false) {
+      appendLog('>>> 正在同步本地 DSH 环境与官方插件生态...', 'highlight');
+      await Promise.all([fetchHostInfo(), fetchInstalled(), fetchCatalog(force)]);
+      updateLocalTabBadge();
+      if (currentMainTab === 'market') renderMarketList();
+      else if (currentMainTab === 'local') renderLocalList();
+      else if (currentMainTab === 'leaderboard') renderLeaderboardList();
+    }
+
+    async function fetchHostInfo() {
+      try {
+        const res = await fetch('/api/market/health');
+        if (res.ok) {
+          hostInfo = await res.json();
+          document.getElementById('profileText').textContent = 'DSH: ' + (hostInfo.dshVersion || '0.1.3') + ' (' + (hostInfo.profile || 'web') + ')';
+        }
+      } catch (e) {
+        document.getElementById('profileText').textContent = 'DSH: 离线 / 演示模式';
+      }
+    }
+
+    async function fetchInstalled() {
+      try {
+        const res = await fetch('/api/market/installed');
+        if (res.ok) {
+          const data = await res.json();
+          installedMap = data.installed || {};
+          updateLocalTabBadge();
+        }
+      } catch (e) {
+        console.warn('fetch installed error', e);
+      }
+    }
+
+    async function fetchCatalog(force = false) {
+      try {
+        const url = '/api/market/catalog' + (force ? '?force=true&t=' + Date.now() : '');
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          catalogPlugins = data.plugins || [];
+        }
+      } catch (e) {
+        console.warn('fetch catalog error', e);
+      }
+    }
+
+    function updateLocalTabBadge() {
+      const keys = Object.keys(installedMap);
+      const count = keys.length;
+      document.getElementById('tabLocalBadge').textContent = String(count);
+      document.getElementById('metricTotalInstalled').textContent = String(count);
+
+      let activeCount = 0;
+      let disabledCount = 0;
+      for (const k of keys) {
+        if (installedMap[k].enabled) activeCount++;
+        else disabledCount++;
+      }
+      document.getElementById('metricActiveCount').textContent = String(activeCount);
+      document.getElementById('metricDisabledCount').textContent = String(disabledCount);
+    }
+
+    // =========================================================================
+    // Tab 1: 插件生态市场渲染
+    // =========================================================================
+    function handleMarketSearch() {
+      currentMarketPage = 1;
+      const val = document.getElementById('marketSearchInput').value.trim();
+      document.getElementById('marketSearchClear').style.display = val ? 'block' : 'none';
+      renderMarketList();
+    }
+
+    function clearMarketSearch() {
+      currentMarketPage = 1;
+      document.getElementById('marketSearchInput').value = '';
+      document.getElementById('marketSearchClear').style.display = 'none';
+      renderMarketList();
+    }
+
+    function filterMarketCategory(cat) {
+      currentMarketPage = 1;
+      currentMarketCat = cat;
+      document.querySelectorAll('#marketCategoriesBar .category-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.cat === cat);
+      });
+      renderMarketList();
+    }
+
+    function isPluginInstalled(item) {
+      if (installedMap[item.id]) return true;
+      if (item.canonicalId && installedMap[item.canonicalId]) return true;
+      if (item.aliasId && installedMap[item.aliasId]) return true;
+      return false;
+    }
+
+    function getInstalledPluginData(item) {
+      return installedMap[item.id] || (item.canonicalId && installedMap[item.canonicalId]) || (item.aliasId && installedMap[item.aliasId]);
+    }
+
+    function handleMarketPageSizeChange(val) {
+      marketPageSize = parseInt(val, 10) || 18;
+      currentMarketPage = 1;
+      renderMarketList();
+    }
+
+    function changeMarketPage(page) {
+      currentMarketPage = page;
+      renderMarketList();
+      const topTarget = document.getElementById('marketGrid');
+      if (topTarget) {
+        topTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+
+    function jumpToMarketPage() {
+      const input = document.getElementById('jumpPageInput');
+      if (!input) return;
+      const page = parseInt(input.value, 10);
+      if (page && page >= 1) {
+        changeMarketPage(page);
+      }
+    }
+
+    function renderPaginationControls(totalItems, totalPages) {
+      const container = document.getElementById('paginationControls');
+      const detailText = document.getElementById('pageDetailText');
+      if (!container) return;
+
+      if (detailText) {
+        const startItem = totalItems === 0 ? 0 : (currentMarketPage - 1) * marketPageSize + 1;
+        const endItem = Math.min(currentMarketPage * marketPageSize, totalItems);
+        detailText.textContent = `显示 ${startItem}-${endItem} / 共 ${totalItems} 款`;
+      }
+
+      let html = '';
+
+      // 首页 & 上一页
+      html += `<button class="page-btn" onclick="changeMarketPage(1)" ${currentMarketPage === 1 ? 'disabled' : ''} title="第一页">⏮ 首页</button>`;
+      html += `<button class="page-btn" onclick="changeMarketPage(${currentMarketPage - 1})" ${currentMarketPage === 1 ? 'disabled' : ''} title="上一页">◀ 上一页</button>`;
+
+      // 计算智能页码按钮范围
+      let startPage = Math.max(1, currentMarketPage - 2);
+      let endPage = Math.min(totalPages, currentMarketPage + 2);
+
+      if (currentMarketPage <= 3) {
+        endPage = Math.min(5, totalPages);
+      }
+      if (currentMarketPage >= totalPages - 2) {
+        startPage = Math.max(1, totalPages - 4);
+      }
+
+      if (startPage > 1) {
+        html += `<button class="page-btn" onclick="changeMarketPage(1)">1</button>`;
+        if (startPage > 2) {
+          html += `<span class="page-ellipsis">...</span>`;
+        }
+      }
+
+      for (let p = startPage; p <= endPage; p++) {
+        html += `<button class="page-btn ${p === currentMarketPage ? 'active' : ''}" onclick="changeMarketPage(${p})">${p}</button>`;
+      }
+
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+          html += `<span class="page-ellipsis">...</span>`;
+        }
+        html += `<button class="page-btn" onclick="changeMarketPage(${totalPages})">${totalPages}</button>`;
+      }
+
+      // 下一页 & 尾页
+      html += `<button class="page-btn" onclick="changeMarketPage(${currentMarketPage + 1})" ${currentMarketPage === totalPages ? 'disabled' : ''} title="下一页">下一页 ▶</button>`;
+      html += `<button class="page-btn" onclick="changeMarketPage(${totalPages})" ${currentMarketPage === totalPages ? 'disabled' : ''} title="末尾页">尾页 ⏭</button>`;
+
+      // 精确跳转
+      html += `
+        <div class="page-jump-box">
+          <span>跳至</span>
+          <input type="number" class="page-jump-input" id="jumpPageInput" min="1" max="${totalPages}" value="${currentMarketPage}" onkeydown="if(event.key==='Enter') jumpToMarketPage()">
+          <span>页</span>
+          <button class="page-jump-btn" onclick="jumpToMarketPage()">前往</button>
+        </div>
+      `;
+
+      container.innerHTML = html;
+    }
+
+    function renderMarketList() {
+      const grid = document.getElementById('marketGrid');
+      const q = (document.getElementById('marketSearchInput').value || '').toLowerCase().trim();
+
+      let list = catalogPlugins.filter(p => {
+        if (currentMarketCat !== 'all') {
+          if (currentMarketCat === 'essential' && !p.isEssential) return false;
+          if (currentMarketCat !== 'essential' && p.category !== currentMarketCat) return false;
+        }
+        if (!q) return true;
+        return (
+          p.name.toLowerCase().includes(q) ||
+          p.id.toLowerCase().includes(q) ||
+          (p.description && p.description.toLowerCase().includes(q)) ||
+          (p.author && p.author.toLowerCase().includes(q)) ||
+          (p.tags && p.tags.some(t => t.toLowerCase().includes(q)))
+        );
+      });
+
+      let installedCountInResults = 0;
+      list.forEach(p => { if (isPluginInstalled(p)) installedCountInResults++; });
+
+      const totalItems = list.length;
+      const effectivePageSize = marketPageSize > 0 ? marketPageSize : (totalItems || 18);
+      const totalPages = Math.max(1, Math.ceil(totalItems / effectivePageSize));
+
+      if (currentMarketPage > totalPages) currentMarketPage = totalPages;
+      if (currentMarketPage < 1) currentMarketPage = 1;
+
+      document.getElementById('marketFilterSummary').innerHTML = 
+        `共检索到 <strong style="color:#0284c7;">${totalItems}</strong> 款生态插件 · 当前第 <strong style="color:#0284c7;">${currentMarketPage}</strong> / ${totalPages} 页 (其中 ${installedCountInResults} 款本地已装载)`;
+
+      const paginationBar = document.getElementById('marketPaginationBar');
+
+      if (!list.length) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 60px; color: #64748b;">🔍 未找到符合条件的生态插件，换个关键词试试？</div>';
+        if (paginationBar) paginationBar.style.display = 'none';
+        return;
+      }
+
+      if (paginationBar) {
+        paginationBar.style.display = 'flex';
+        renderPaginationControls(totalItems, totalPages);
+      }
+
+      const startIndex = (currentMarketPage - 1) * effectivePageSize;
+      const endIndex = marketPageSize >= 9999 ? totalItems : Math.min(startIndex + effectivePageSize, totalItems);
+      const pagedList = list.slice(startIndex, endIndex);
+
+      grid.innerHTML = pagedList.map(item => {
+        const installed = isPluginInstalled(item);
+        const installedData = getInstalledPluginData(item);
+        const curVer = installedData ? (installedData.version || item.version) : item.version;
+
+        return `
+          <div class="plugin-card ${installed ? 'card-installed' : ''}">
+            <div>
+              <div class="card-top">
+                <div class="plugin-icon">${getPluginIconSymbol(item)}</div>
+                <div class="plugin-meta">
+                  <div class="plugin-title">
+                    <span>${escapeHtml(item.name)}</span>
+                    <span class="version-tag">v${escapeHtml(curVer)}</span>
+                  </div>
+                  <div class="plugin-author-row">
+                    <span>by ${escapeHtml(item.author || 'DeepSeek Community')}</span>
+                    ${item.isOfficial ? '<span style="color:#0284c7;font-weight:700;">[官方]</span>' : ''}
+                  </div>
+                </div>
+                ${installed 
+                  ? '<span class="status-pill-badge status-pill-installed">✓ 已装载</span>' 
+                  : '<span class="status-pill-badge status-pill-uninstalled">云端上架</span>'}
+              </div>
+              <div class="plugin-desc" title="${escapeHtml(item.description)}">${escapeHtml(item.description)}</div>
+              <div class="tag-row">
+                ${(item.tags || []).slice(0, 4).map(t => `<span class="tag-badge">${escapeHtml(t)}</span>`).join('')}
+              </div>
+            </div>
+
+            <div>
+              <div class="card-stats">
+                <span>⭐ ${item.stars || 0}</span>
+                <span>📥 ${item.downloads || 0}</span>
+                <span>🛡️ ${escapeHtml((item.permissions || '').split(',')[0] || '环境隔离')}</span>
+              </div>
+              <div class="card-actions">
+                ${installed 
+                  ? `<button class="btn btn-installed" onclick="jumpToLocalManager('${item.id}')">⚙️ 管理/启停</button>` 
+                  : `<button class="btn btn-primary" onclick="installPlugin('${item.id}')">⚡ 一键装载</button>`}
+                <button class="btn btn-detail" onclick="openDetailModal('${item.id}')">详情</button>
+                <button class="btn btn-badge" onclick="copyProtocolBadge('${item.id}')" title="复制协议徽章">📋 徽章</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // =========================================================================
+    // Tab 2: 本地插件管理渲染与热启停
+    // =========================================================================
+    function refreshInstalled() {
+      fetchInstalled().then(() => {
+        renderLocalList();
+        showToast('本地插件列表已刷新', '🔄');
+      });
+    }
+
+    function filterLocalPlugins() {
+      renderLocalList();
+    }
+
+    function jumpToLocalManager(pluginId) {
+      switchMainTab('local');
+      setTimeout(() => {
+        const row = document.getElementById('local-row-' + pluginId);
+        if (row) {
+          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          row.style.background = '#e0f2fe';
+          setTimeout(() => { row.style.background = ''; }, 2000);
+        }
+      }, 150);
+    }
+
+    function renderLocalList() {
+      const container = document.getElementById('localPluginsList');
+      const q = (document.getElementById('localSearchInput').value || '').toLowerCase().trim();
+      const keys = Object.keys(installedMap);
+
+      let filteredKeys = keys.filter(k => {
+        const item = installedMap[k];
+        if (!q) return true;
+        return (
+          k.toLowerCase().includes(q) ||
+          (item.displayName && item.displayName.toLowerCase().includes(q)) ||
+          (item.description && item.description.toLowerCase().includes(q)) ||
+          (item.author && item.author.toLowerCase().includes(q))
+        );
+      });
+
+      if (!filteredKeys.length) {
+        container.innerHTML = '<div style="text-align: center; padding: 30px; color: #6b7280; background: #ffffff; border: 1px dashed #e5e7eb; border-radius: 8px; font-size: 12px;">💻 本地暂未扫描到符合条件的扩展组件</div>';
+        return;
+      }
+
+      container.innerHTML = filteredKeys.map(key => {
+        const item = installedMap[key];
+        const isCore = (key === 'dsh-stream-market');
+        const isEnabled = !!item.enabled;
+        const displayName = item.displayName || item.name || key;
+        const shortName = displayName.replace(/^@deepseek-ai\//, '');
+
+        return `
+          <div class="local-plugin-card" id="local-row-${item.id}">
+            <div class="local-card-left">
+              <input type="checkbox" class="cb-local-item" data-id="${item.id}" ${isCore ? 'disabled' : ''} onchange="updateSelectedCount()">
+              <div class="local-card-icon">${getPluginIconSymbol(item)}</div>
+              <div class="local-card-info">
+                <div class="local-card-header">
+                  <span class="local-card-title" title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</span>
+                  <span class="version-tag">v${escapeHtml(item.version || '1.0.0')}</span>
+                  <span class="local-author-tag">${escapeHtml(item.author || 'DeepSeek Community')}</span>
+                </div>
+                <div class="local-card-desc" title="${escapeHtml(item.description || '')}">${escapeHtml(item.description || '本地已装载的 DeepSeek 运行时扩展组件')}</div>
+              </div>
+            </div>
+
+            <div class="local-card-right">
+              <!-- 单键热启停切换 -->
+              <button class="btn-toggle-switch ${isEnabled ? 'on' : 'off'}" onclick="togglePluginHotState('${item.id}', ${!isEnabled})" title="点击切换状态并平滑热重启宿主">
+                <span class="toggle-dot"></span>
+                <span>${isEnabled ? '运行中' : '已停用'}</span>
+              </button>
+
+              <button class="btn-subtle btn-sm" onclick="openDetailModal('${item.id}')">详情</button>
+              ${!isCore ? `<button class="btn-subtle btn-sm text-danger" onclick="doSingleCleanUninstall('${item.id}', '${escapeHtml(displayName)}')">卸载</button>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      updateSelectedCount();
+    }
+
+    function toggleSelectAllLocal(checked) {
+      document.querySelectorAll('.cb-local-item:not(:disabled)').forEach(cb => {
+        cb.checked = checked;
+      });
+      updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+      const cbs = document.querySelectorAll('.cb-local-item:checked');
+      const count = cbs.length;
+      document.getElementById('localSelectedBadge').textContent = '已选 ' + count + ' 项';
+      const btn = document.getElementById('btnBatchUninstall');
+      btn.disabled = count === 0;
+      btn.textContent = '🔥 批量彻底卸载所选 (' + count + ')';
+    }
+
+    // 热启停核心函数 (向宿主发热重启信号)
+    async function togglePluginHotState(pluginId, willEnable) {
+      appendLog('>>> ⚡ 发起热启停切换: ' + pluginId + ' -> ' + (willEnable ? '【启用】' : '【停用】'), 'highlight');
+      showToast('正在切换插件状态并热重启 DSH 宿主服务...', '⚡', 4000);
+
+      try {
+        const res = await fetch('/api/market/toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: pluginId, enabled: willEnable })
+        });
+        const data = await res.json();
+        if (data.success) {
+          appendLog('✅ 补丁与配置已更新，宿主正在平滑热重载...', 'success');
+          showToast(willEnable ? '插件已启用，宿主热重启完成！' : '插件已停用，宿主热重启完成！', '✅', 3000);
+          setTimeout(() => {
+            fetchInstalled().then(() => {
+              renderLocalList();
+              if (currentMainTab === 'market') renderMarketList();
+            });
+          }, 1200);
+        } else {
+          appendLog('❌ 热切换失败: ' + data.error, 'error');
+          alert('热启停失败: ' + data.error);
+        }
+      } catch (err) {
+        appendLog('❌ 请求异常: ' + err.message, 'error');
+      }
+    }
+
+    async function triggerManualRestart() {
+      if (!confirm('确定要主动触发 DeepSeek Harness 宿主热重启吗？\n\n这将重新加载 profiles/web 下所有 cordis 补丁与插件状态。')) return;
+      showToast('正在触发宿主热重启...', '⚡', 3000);
+      appendLog('>>> ⚡ 主动发送宿主热重启信号 (.dsh-restart-trigger)...', 'highlight');
+      try {
+        const res = await fetch('/api/market/restart', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          appendLog('✅ 热重启信号已发送，宿主已重新载入！', 'success');
+          setTimeout(() => refreshAll(), 1500);
+        }
+      } catch (e) {
+        appendLog('❌ 重启请求异常: ' + e.message, 'error');
+      }
+    }
+
+    async function doRescueBundles() {
+      appendLog('>>> 🚑 正在执行 DSH 运行时完整性体检与 bundle 自愈...', 'highlight');
+      showToast('正在自愈体检...', '🚑', 3000);
+      try {
+        const res = await fetch('/api/market/rescue', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+          appendLog('✅ ' + data.message, 'success');
+          alert('🎉 ' + data.message);
+          refreshInstalled();
+        }
+      } catch (e) {
+        appendLog('❌ 自愈异常: ' + e.message, 'error');
+      }
+    }
+
+    // 单个卸载
+    function doSingleCleanUninstall(pluginId, displayName) {
+      if (!confirm('⚠️ 确定要彻底卸载并清理本地插件「' + (displayName || pluginId) + '」吗？\n\n操作包含：\n1. 注销 cordis.patch.yml 规则\n2. 从 package.json 依赖移除\n3. 物理粉碎 node_modules 残留\n4. 热重启宿主平滑生效')) return;
+      executeUninstallRequest([pluginId]);
+    }
+
+    // 批量卸载
+    function executeBatchCleanUninstall() {
+      const cbs = document.querySelectorAll('.cb-local-item:checked');
+      const ids = Array.from(cbs).map(cb => cb.dataset.id).filter(Boolean);
+      if (!ids.length) return;
+
+      if (!confirm('⚠️ 危险操作确认：\n\n确定要批量彻底卸载以下 ' + ids.length + ' 个插件吗？\n\n' + ids.join('\n'))) return;
+      executeUninstallRequest(ids);
+    }
+
+    function executeUninstallRequest(ids) {
+      const cleanConfig = document.getElementById('optCleanConfig') ? document.getElementById('optCleanConfig').checked : true;
+      const cleanFiles = document.getElementById('optCleanFiles') ? document.getElementById('optCleanFiles').checked : true;
+      const cleanSource = true;
+
+      terminalDrawer.classList.add('open');
+      appendLog('>>> 🚀 启动深度卸载管道 (共 ' + ids.length + ' 个目标)...', 'highlight');
+
+      const params = new URLSearchParams({
+        stream: '1',
+        ids: ids.join(','),
+        cleanConfig: String(cleanConfig),
+        cleanFiles: String(cleanFiles),
+        cleanSource: String(cleanSource)
+      });
+
+      const evtSource = new EventSource('/api/market/clean-uninstall?' + params.toString());
+      evtSource.onmessage = function(e) {
+        try {
+          const data = JSON.parse(e.data);
+          if (data.type === 'log') appendLog(data.message);
+          else if (data.type === 'success') appendLog(data.message, 'success');
+          else if (data.type === 'error') appendLog(data.message, 'error');
+        } catch (err) {
+          appendLog(e.data);
+        }
+      };
+      evtSource.onerror = function() {
+        appendLog('✅ 卸载事务执行完毕，正在刷新本地环境...', 'success');
+        evtSource.close();
+        refreshInstalled();
+      };
+    }
+
+    // =========================================================================
+    // Tab 3: 官网热榜广场渲染 (100% 对齐 deepseek.stream 真实榜单)
+    // =========================================================================
+    function switchSubRank(subRank) {
+      currentSubRank = subRank;
+      document.querySelectorAll('.subrank-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.sub === subRank);
+      });
+      renderLeaderboardList();
+    }
+
+    async function triggerOfficialSync() {
+      const btn = document.getElementById('btnSyncOfficial');
+      const icon = document.getElementById('syncIcon');
+      if (icon) icon.classList.add('rotating');
+      if (btn) btn.disabled = true;
+
+      showToast('正在从 deepseek.stream 实时拉取最新插件库...', '🔄', 3000);
+      try {
+        try {
+          await fetch('/api/market/refresh');
+        } catch (e) {
+          console.warn('refresh api warning', e);
+        }
+        await fetchCatalog(true);
+        renderLeaderboardList();
+        if (currentMainTab === 'market') renderMarketList();
+        showToast(`已成功同步官网最新插件（共 ${catalogPlugins.length} 款）！`, '✅', 3000);
+      } catch (err) {
+        showToast('官网同步失败: ' + err.message, '❌', 3000);
+      } finally {
+        if (icon) icon.classList.remove('rotating');
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function renderLeaderboardList() {
+      const container = document.getElementById('leaderboardList');
+      if (!container) return;
+      let list = [...catalogPlugins];
+
+      if (currentSubRank === 'hot') {
+        list.sort((a, b) => {
+          // Official and essential at the very top, then real live downloads
+          if (a.id === 'dsh-stream-market') return -1;
+          if (b.id === 'dsh-stream-market') return 1;
+          if (a.id === 'dsh-infinite-gen-4') return -1;
+          if (b.id === 'dsh-infinite-gen-4') return 1;
+          return (b.downloads || 0) - (a.downloads || 0);
+        });
+      } else if (currentSubRank === 'essential') {
+        list = list.filter(p => p.isEssential);
+        list.sort((a, b) => (b.downloads || 0) - (a.downloads || 0));
+      } else if (currentSubRank === 'trending') {
+        list.sort((a, b) => (b.weeklyDownloads || b.downloads || 0) - (a.weeklyDownloads || a.downloads || 0));
+      } else if (currentSubRank === 'newest') {
+        list.sort((a, b) => {
+          const tA = a.updatedAt || a.versionHistory?.[0]?.releaseDate || '2026-09-01';
+          const tB = b.updatedAt || b.versionHistory?.[0]?.releaseDate || '2026-09-01';
+          return tB.localeCompare(tA);
+        });
+      } else if (currentSubRank === 'downloads') {
+        list.sort((a, b) => (b.downloads || 0) - (a.downloads || 0));
+      }
+
+      if (list.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding: 40px; color: #64748b;">未找到匹配的热榜插件</div>`;
+        return;
+      }
+
+      container.innerHTML = list.map((item, index) => {
+        const rankNum = index + 1;
+        const isGold = rankNum === 1;
+        const isSilver = rankNum === 2;
+        const isBronze = rankNum === 3;
+        const installed = isPluginInstalled(item);
+
+        let badgeClass = 'badge-normal';
+        let badgeText = '#' + rankNum;
+        let cardExtraClass = '';
+
+        if (isGold) {
+          badgeClass = 'badge-gold';
+          badgeText = '👑 1';
+          cardExtraClass = 'rank-gold';
+        } else if (isSilver) {
+          badgeClass = 'badge-silver';
+          badgeText = '🥈 2';
+          cardExtraClass = 'rank-silver';
+        } else if (isBronze) {
+          badgeClass = 'badge-bronze';
+          badgeText = '🥉 3';
+          cardExtraClass = 'rank-bronze';
+        }
+
+        const dateStr = item.updatedAt ? item.updatedAt.slice(0, 10) : (item.versionHistory?.[0]?.releaseDate ? item.versionHistory[0].releaseDate.slice(0, 10) : '2026-09-13');
+
+        return `
+          <div class="rank-card ${cardExtraClass}">
+            <div class="rank-content-main">
+              <div class="rank-badge-wrap ${badgeClass}">${badgeText}</div>
+              <div class="plugin-icon">${getPluginIconSymbol(item)}</div>
+              <div class="rank-meta">
+                <div class="rank-title-row">
+                  <span class="rank-plugin-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span>
+                  <span class="rank-tag-version">v${escapeHtml(item.version || '1.0.0')}</span>
+                  ${item.isEssential ? '<span class="rank-tag-essential">⭐ 必装精选</span>' : ''}
+                  ${installed ? '<span class="rank-tag-installed">✓ 已安装</span>' : ''}
+                </div>
+                <div class="rank-desc" title="${escapeHtml(item.description || '')}">${escapeHtml(item.description || '')}</div>
+                <div class="rank-stats-row">
+                  <span class="rank-stat-pill">👤 作者: <strong>${escapeHtml(item.author || 'DeepSeek Community')}</strong></span>
+                  <span class="rank-stat-pill rating">⭐ ${item.ratingScore || '9.5'} 分</span>
+                  <span class="rank-stat-pill">📥 <strong>${(item.downloads || 0).toLocaleString()}</strong> 下载</span>
+                  <span class="rank-stat-pill">🕒 ${dateStr}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="rank-actions">
+              ${installed 
+                ? `<button class="btn-rank-manage" onclick="jumpToLocalManager('${item.id}')">⚙️ 前往管理</button>`
+                : `<button class="btn-rank-install" onclick="installPlugin('${item.id}')">⚡ 一键安装</button>`}
+              <button class="btn-rank-detail" onclick="openDetailModal('${item.id}')">详情</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // =========================================================================
+    // 安装与协议联动 (强制生态账号登录认证)
+    // =========================================================================
+    let pendingInstallPluginId = null;
+
+    function installPlugin(pluginId, source) {
+      // 0. 登录状态强校验拦截（下载安装必须登录）
+      if (!currentUser) {
+        pendingInstallPluginId = pluginId;
+        showToast('下载与安装插件需先登录生态账号', '🔒', 3500);
+        openAuthModal('login');
+        return;
+      }
+
+      // 1. 获取完整元数据
+      const item = catalogPlugins.find(p => p.id === pluginId || p.canonicalId === pluginId || p.aliasId === pluginId) || installedMap[pluginId] || {};
+      const name = item.displayName || item.name || pluginId;
+      const version = item.version || 'latest';
+      
+      // 仓库地址规范化 (严格对齐 Hub 标准，优先提取包含组织名的完整仓库)
+      let rawRepo = item.githubRepo || item.repo || '';
+      if (!rawRepo && (pluginId.startsWith('dsh-infinite-') || (item.author && item.author !== 'DeepSeek AI'))) {
+        rawRepo = item.author ? `${item.author}/${pluginId}` : `Minglink/${pluginId}`;
+      }
+      rawRepo = rawRepo.replace(/^https?:\/\/github\.com\//i, '').replace(/\.git$/i, '').replace(/\/+$/, '').trim();
+      const repo = rawRepo && rawRepo.includes('/') ? rawRepo : (pluginId.startsWith('dsh-infinite-') ? `Minglink/${pluginId}` : (item.id || pluginId));
+
+      const permissions = item.permissions || '网络访问, 本地文件读取';
+
+      // 动态解析下载源：官方动态打包 API 具有最高可用性保证（绝无 404）
+      let downloadUrl = '';
+      if (item.downloadUrl && !item.downloadUrl.includes('/uploads/plugins/')) {
+        downloadUrl = item.downloadUrl;
+      } else if (source && !source.includes('/uploads/plugins/')) {
+        downloadUrl = source;
+      } else {
+        downloadUrl = 'https://deepseek.stream/api/plugins/download?id=' + encodeURIComponent(pluginId);
+      }
+
+      // 鉴权元数据绑定
+      const userId = currentUser ? (currentUser.id || currentUser.email || currentUser.username) : '';
+      const username = currentUser ? (currentUser.username || currentUser.name) : '';
+      const token = currentUser ? (currentUser.token || userId) : '';
+
+      // 2. 构造标准规范 dsh:// 一键安装协议 (附带登录凭证)
+      const dshUrl = 'dsh://plugin/install?id=' + encodeURIComponent(pluginId) +
+        '&name=' + encodeURIComponent(name) +
+        '&version=' + encodeURIComponent(version) +
+        '&repo=' + encodeURIComponent(repo) +
+        '&userId=' + encodeURIComponent(userId) +
+        '&username=' + encodeURIComponent(username) +
+        '&token=' + encodeURIComponent(token) +
+        '&permissions=' + encodeURIComponent(permissions) +
+        '&downloadUrl=' + encodeURIComponent(downloadUrl);
+
+      // 3. 展现高质感 Toast 提示
+      showToast('🤖 正在唤起 DeepSeek 智能插件装配中心...', '✨', 4000);
+
+      // 4. 多通道可靠派发至主进程，直接拉起 Electron 原生装配模态弹窗 (绝无 dsh.cmd / npm.cmd 外部缺失报错)
+      // 通道 A: 写入后端 Intent 缓存 (由 main.js watchProtocolIntent 捕获并立即弹窗)
+      fetch('/api/market/install-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: dshUrl, id: pluginId, name, version, repo, permissions, downloadUrl })
+      }).then(r => r.json()).then(res => {
+        if (res && res.success) {
+          appendLog('>>> ⚡ 已向客户端成功派发装配意图: ' + pluginId, 'highlight');
+        }
+      }).catch(() => {});
+
+      // 通道 B: 向宿主父窗口 postMessage 广播
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ type: 'dsh-ai-install-plugin', url: dshUrl }, '*');
+        }
+      } catch (e) {}
+
+      // 通道 C: 尝试直接触发协议导航
+      try {
+        const link = document.createElement('a');
+        link.href = dshUrl;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => link.remove(), 100);
+      } catch (e) {}
+
+      // 5. 启动智能探活轮询：后台 AI 装配与重启完成后自动刷新卡片并点亮小绿标
+      startInstallLiveWatch(pluginId);
+    }
+
+    let liveWatchTimer = null;
+    function startInstallLiveWatch(targetId) {
+      if (liveWatchTimer) clearInterval(liveWatchTimer);
+      let attempts = 0;
+      const maxAttempts = 35; // 35 * 1.5s = 52.5s
+      liveWatchTimer = setInterval(async () => {
+        attempts++;
+        if (attempts > maxAttempts) {
+          clearInterval(liveWatchTimer);
+          liveWatchTimer = null;
+          return;
+        }
+        try {
+          const res = await fetch('/api/market/installed?t=' + Date.now());
+          if (res.ok) {
+            const data = await res.json();
+            const inst = data.installed || {};
+            if (inst[targetId] || (installedMap && Object.keys(inst).length > Object.keys(installedMap).length)) {
+              installedMap = inst;
+              clearInterval(liveWatchTimer);
+              liveWatchTimer = null;
+              updateLocalTabBadge();
+              renderMarketList();
+              renderLocalList();
+              showToast('🎉 插件已由 AI 成功适配并激活！小绿标已点亮。', '✅', 4000);
+            }
+          }
+        } catch (e) {}
+      }, 1500);
+    }
+
+    // 窗口恢复焦点或接收到 postMessage 时立即静默同步最新运行状态
+    window.addEventListener('focus', () => {
+      fetchInstalled().then(() => {
+        renderMarketList();
+        renderLocalList();
+      });
+    });
+
+    window.addEventListener('message', (evt) => {
+      if (evt.data && (evt.data.type === 'dsh-plugin-installed' || evt.data === 'refresh-market')) {
+        refreshInstalled();
+      }
+    });
+
+    function copyProtocolBadge(pluginId) {
+      const badgeCode = `[![Install with DeepSeek Harness](https://deepseek.stream/badge/install.svg)](dsh://plugin/install?id=${pluginId})`;
+      navigator.clipboard.writeText(badgeCode).then(() => {
+        showToast('已复制 Markdown 安装徽章到剪贴板！', '📋');
+      }).catch(() => {
+        prompt('请复制 Markdown 徽章代码：', badgeCode);
+      });
+    }
+
+    function requestFullScreen() {
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'dsh-market-open-fullscreen' }, '*');
+      } else {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+    }
+
+    function openProtocolModal() { document.getElementById('protocolModal').classList.add('active'); }
+    function closeProtocolModal() { document.getElementById('protocolModal').classList.remove('active'); }
+    function executeProtocolDebug() {
+      const val = document.getElementById('protocolInput').value;
+      if (val) {
+        window.location.href = val;
+        closeProtocolModal();
+        showToast('已向系统广播协议唤起指令', '🔗');
+      }
+    }
+
+    // 详情弹窗
+    function openDetailModal(pluginId) {
+      const item = catalogPlugins.find(p => p.id === pluginId || p.canonicalId === pluginId || p.aliasId === pluginId) || installedMap[pluginId];
+      if (!item) return;
+
+      document.getElementById('detailTitle').textContent = item.displayName || item.name || pluginId;
+      document.getElementById('detailBody').innerHTML = `
+        <div style="display: flex; gap: 14px; margin-bottom: 16px;">
+          <div class="plugin-icon" style="width: 56px; height: 56px; font-size: 26px;">${getPluginIconSymbol(item)}</div>
+          <div>
+            <div style="font-size: 16px; font-weight: 700; color: #0f172a;">${escapeHtml(item.displayName || item.name || pluginId)}</div>
+            <div style="font-size: 12px; color: #64748b; margin-top: 2px;">作者: ${escapeHtml(item.author || 'DeepSeek Community')} · 版本: v${escapeHtml(item.version || '1.0.0')}</div>
+            <div style="font-size: 12px; color: #0284c7; margin-top: 2px;">ID: ${escapeHtml(item.id || pluginId)}</div>
+          </div>
+        </div>
+        <div style="font-size: 13px; line-height: 1.6; color: #334155; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 14px;">
+          ${escapeHtml(item.description || '暂无详细描述')}
+        </div>
+        <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">权限要求: <strong>${escapeHtml(item.permissions || '本地执行, 网络访问')}</strong></div>
+        <div style="font-size: 12px; color: #64748b; margin-bottom: 16px;">主页 / 仓库: <a href="${escapeHtml(item.homepage || '#')}" target="_blank" style="color: #0284c7;">${escapeHtml(item.homepage || '官方生态')}</a></div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px;">
+          <button class="btn btn-detail" onclick="closeDetailModal()">关闭</button>
+          ${isPluginInstalled(item) 
+            ? `<button class="btn btn-jump-local" onclick="closeDetailModal(); jumpToLocalManager('${item.id}');">⚙️ 前往本地管理</button>` 
+            : `<button class="btn btn-install" onclick="closeDetailModal(); installPlugin('${item.id}');">⚡ 一键安装</button>`}
+        </div>
+      `;
+      document.getElementById('detailModal').classList.add('active');
+    }
+    function closeDetailModal() { document.getElementById('detailModal').classList.remove('active'); }
+
+    // =========================================================================
+    // 用户登录与身份系统
+    // =========================================================================
+    let currentUser = null;
+    function initAuthStatus() {
+      try {
+        const saved = localStorage.getItem('dsh_market_user');
+        if (saved) {
+          currentUser = JSON.parse(saved);
+          renderUserArea();
+        }
+      } catch (e) {}
+    }
+    function renderUserArea() {
+      const area = document.getElementById('userArea');
+      if (!currentUser) {
+        area.innerHTML = `
+          <button class="auth-btn btn-login" onclick="openAuthModal('login')">🔑 登录</button>
+          <button class="auth-btn btn-register" onclick="openAuthModal('register')">✨ 注册</button>
+        `;
+        return;
+      }
+      const initial = (currentUser.name || currentUser.username || 'U').charAt(0).toUpperCase();
+      area.innerHTML = `
+        <div class="user-pill" onclick="toggleUserDropdown()">
+          <div class="user-avatar user-avatar-fallback">${initial}</div>
+          <span class="user-name">${escapeHtml(currentUser.name || currentUser.username)}</span>
+          <span class="user-badge">${currentUser.badge || 'VIP'}</span>
+          <span style="font-size: 10px; color: #64748b;">▼</span>
+        </div>
+        <div class="user-dropdown" id="userDropdown">
+          <div class="user-dropdown-header">
+            <div style="font-weight: 700; font-size: 13px; color: #0f172a;">${escapeHtml(currentUser.name || currentUser.username)}</div>
+            <div style="font-size: 11px; color: #64748b;">${escapeHtml(currentUser.email || 'developer@deepseek.stream')}</div>
+          </div>
+          <div class="user-dropdown-item" onclick="switchMainTab('local'); toggleUserDropdown();">📦 我的本地插件库</div>
+          <div class="user-dropdown-item text-danger" onclick="doLogout()">🚪 退出登录</div>
+        </div>
+      `;
+    }
+    function toggleUserDropdown() {
+      const d = document.getElementById('userDropdown');
+      if (d) d.classList.toggle('active');
+    }
+    function openAuthModal(mode) {
+      document.getElementById('authModal').classList.add('active');
+      switchAuthTab(mode);
+    }
+    function closeAuthModal() {
+      document.getElementById('authModal').classList.remove('active');
+    }
+    function switchAuthTab(mode) {
+      const isReg = mode === 'register';
+      document.getElementById('authModalTitle').textContent = isReg ? '✨ 注册 DeepSeek 生态账号' : '🔑 登录 DeepSeek 生态';
+      document.getElementById('authNameField').style.display = isReg ? 'block' : 'none';
+      document.getElementById('authSubmitBtn').textContent = isReg ? '立即注册' : '确认登录';
+      document.getElementById('tabAuthLogin').classList.toggle('btn-install', !isReg);
+      document.getElementById('tabAuthRegister').classList.toggle('btn-install', isReg);
+    }
+    function handleAuthSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('authEmail').value.trim();
+      const name = document.getElementById('authName').value.trim() || email.split('@')[0];
+      currentUser = { email, name, username: name, badge: 'PRO' };
+      localStorage.setItem('dsh_market_user', JSON.stringify(currentUser));
+      closeAuthModal();
+      renderUserArea();
+      showToast('欢迎，' + name + '！已成功接入生态。', '🎉');
+      if (pendingInstallPluginId) {
+        const toInstall = pendingInstallPluginId;
+        pendingInstallPluginId = null;
+        setTimeout(() => installPlugin(toInstall), 350);
+      }
+    }
+    function doLogout() {
+      currentUser = null;
+      localStorage.removeItem('dsh_market_user');
+      renderUserArea();
+      showToast('已安全退出登录', '👋');
+    }
+
+    // =========================================================================
+    // 辅助工具函数
+    // =========================================================================
+    function getPluginIconSymbol(item) {
+      const id = (item.id || '').toLowerCase();
+      const cat = (item.category || '').toLowerCase();
+      if (id.includes('market') || id.includes('yaml')) return '🛒';
+      if (id.includes('theme') || id.includes('cordis') || id.includes('skin')) return '🎨';
+      if (id.includes('infinite') || id.includes('evil') || cat === 'security') return '🛡️';
+      if (id.includes('search') || id.includes('find')) return '🔍';
+      if (id.includes('terminal') || id.includes('bash') || id.includes('cmd')) return '💻';
+      if (id.includes('agent') || id.includes('ralph') || id.includes('todo') || id.includes('standard')) return '🤖';
+      if (id.includes('audit') || id.includes('model')) return '⚙️';
+      return '🧩';
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // 启动初始化
+    init();
+
+    // =========================================================================
+    // 分类横向滑动控制 (支持滚轮水平翻滚、拖拽、左右箭头)
+    // =========================================================================
+    function scrollCategoryBar(offset) {
+      const bar = document.getElementById('marketCategoriesBar');
+      if (bar) bar.scrollBy({ left: offset, behavior: 'smooth' });
+    }
+
+    function scrollSubnavBar(id, offset) {
+      const bar = document.getElementById(id);
+      if (bar) bar.scrollBy({ left: offset, behavior: 'smooth' });
+    }
+
+    function setupHorizontalScroll(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      // 鼠标滚轮横向滚动
+      el.addEventListener('wheel', (e) => {
+        if (e.deltaY !== 0) {
+          e.preventDefault();
+          el.scrollLeft += e.deltaY * 1.2;
+        }
+      }, { passive: false });
+
+      // 鼠标按下拖动
+      let isDown = false;
+      let startX, scrollLeft;
+      el.addEventListener('mousedown', (e) => {
+        isDown = true;
+        el.classList.add('dragging');
+        startX = e.pageX - el.offsetLeft;
+        scrollLeft = el.scrollLeft;
+      });
+      window.addEventListener('mouseup', () => {
+        isDown = false;
+        el.classList.remove('dragging');
+      });
+      el.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - el.offsetLeft;
+        const walk = (x - startX) * 1.4;
+        el.scrollLeft = scrollLeft - walk;
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setupHorizontalScroll('marketCategoriesBar');
+      setupHorizontalScroll('leaderboardSubnav');
+    });
+
+
+    // =========================================================================
+    // 分类横向滑动控制 (支持滚轮水平翻滚、拖拽、左右箭头)
+    // =========================================================================
+    function scrollCategoryBar(offset) {
+      const bar = document.getElementById('marketCategoriesBar');
+      if (bar) bar.scrollBy({ left: offset, behavior: 'smooth' });
+    }
+
+    function scrollSubnavBar(id, offset) {
+      const bar = document.getElementById(id);
+      if (bar) bar.scrollBy({ left: offset, behavior: 'smooth' });
+    }
+
+    function setupHorizontalScroll(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      // 鼠标滚轮横向滚动
+      el.addEventListener('wheel', (e) => {
+        if (e.deltaY !== 0) {
+          e.preventDefault();
+          el.scrollLeft += e.deltaY * 1.2;
+        }
+      }, { passive: false });
+
+      // 鼠标按下拖动
+      let isDown = false;
+      let startX, scrollLeft;
+      el.addEventListener('mousedown', (e) => {
+        isDown = true;
+        el.classList.add('dragging');
+        startX = e.pageX - el.offsetLeft;
+        scrollLeft = el.scrollLeft;
+      });
+      window.addEventListener('mouseup', () => {
+        isDown = false;
+        el.classList.remove('dragging');
+      });
+      el.addEventListener('mousemove', (e) => {
+        if (!isDown) return;
+        e.preventDefault();
+        const x = e.pageX - el.offsetLeft;
+        const walk = (x - startX) * 1.4;
+        el.scrollLeft = scrollLeft - walk;
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setupHorizontalScroll('marketCategoriesBar');
+      setupHorizontalScroll('leaderboardSubnav');
+    });
+
+  </script>
+</body>
+</html>
