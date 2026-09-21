@@ -63,6 +63,9 @@
   WriteRegStr HKCU "Software\Classes\dsh\shell\open\command" "" '"$INSTDIR\DeepSeek Harness.exe" "%1"'
 
   DetailPrint "Cleaning legacy installation residue..."
+  DetailPrint "Configuring default theme settings (Thunderstorm)..."
+  Delete "$PROFILE\.dsh\liquid-glass-settings.json"
+  Delete "$PROFILE\.dsh\liquid-glass-wallpapers.json"
   RMDir /r "$INSTDIR\resources\app"
   RMDir /r "$LOCALAPPDATA\Programs\DeepSeek-Harness"
 
