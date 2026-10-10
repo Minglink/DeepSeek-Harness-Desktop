@@ -390,6 +390,34 @@ describe('desktop community panel', () => {
     expect(f.api.install).toHaveBeenCalledWith(INTENT)
   })
 
+  it('shows the retained environment and localized trial failure without replacing it with an AI failure', async () => {
+    const output: { locale: string; failure: string; recovery: string; showsAiFailure: boolean }[] = []
+    for (const [locale, copy] of [['en', communityEn], ['zh-CN', communityZh]] as const) {
+      const f = fixture({ tasks: [task({ phase: 'failed', restored: true, problem: { code: 'trial-failed' } })] })
+      show(f, locale)
+      fireEvent.click(screen.getByRole('tab', { name: copy.tasks }))
+      output.push({ locale, failure: (await screen.findByText(copy.trialFailed)).textContent ?? '',
+        recovery: screen.getByText(copy.restored).textContent ?? '', showsAiFailure: screen.queryByText(copy.adaptationFailed) !== null })
+      cleanup()
+    }
+    expect(output).toMatchInlineSnapshot(`
+      [
+        {
+          "failure": "The plugin failed its isolated trial and was not enabled",
+          "locale": "en",
+          "recovery": "The previous environment has been restored",
+          "showsAiFailure": false,
+        },
+        {
+          "failure": "插件未通过独立试运行，未启用",
+          "locale": "zh-CN",
+          "recovery": "已恢复之前的环境",
+          "showsAiFailure": false,
+        },
+      ]
+    `)
+  })
+
   it('offers sign-in when the active download reports an expired account asynchronously', async () => {
     const f = fixture()
     show(f)

@@ -85,3 +85,7 @@ DeepSeek Harness 的 Windows 桌面版 —— 用 Electron 外壳把官方 [Deep
 
 - 官方 DeepSeek Harness 采用 [MIT License](https://github.com/deepseek-ai/deepseek-harness/blob/master/LICENSE)。
 - 本项目同样以 MIT 许可发布。
+
+## 社区插件安装修订（2026-10-11）
+
+应用版本为 `0.2.1-alpha.1`，发行修订为 `community-plugin-install-fix-20261011`。修复候选环境 pnpm 虚拟存储路径迁移，并保留安装环境首错，避免把安装设施错误送入 AI。完整源码和未签名 Windows x64 安装包见 [本次 Release](https://github.com/Minglink/DeepSeek-Harness-Desktop/releases/tag/v0.2.1-alpha.1-community-plugin-install-fix)。历史发行和源码保持可取；详细验证范围与限制见 Release 说明。

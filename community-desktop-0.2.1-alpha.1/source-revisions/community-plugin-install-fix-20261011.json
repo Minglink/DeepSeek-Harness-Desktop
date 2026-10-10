@@ -1,0 +1,90 @@
+{
+  "revision": "community-plugin-install-fix-20261011",
+  "version": "0.2.1-alpha.1",
+  "sourceArchiveSha256": "750380a47d42816fe134412250a7cf3959387641d4e7ba6981aedd74858c8a70",
+  "sourceSnapshotSha256": "7819275a43bef7bd329a96489d12a0bb8a0bc528cacd19ed458f818405ba9ba7",
+  "fullSourceFiles": 15510,
+  "files": [
+    {
+      "path": "apps/desktop/README.i18n.yaml",
+      "bytes": 3026,
+      "sha256": "eeabcf843be1341edf5a643d96f926407cc56f40d10ce067f8a3b9621191450e"
+    },
+    {
+      "path": "apps/desktop/README.md",
+      "bytes": 128585,
+      "sha256": "83730bd16e4dbf51fd0e7513a23b3c009165dba269945a0795917b77ee9f2333"
+    },
+    {
+      "path": "apps/desktop/README.zh.md",
+      "bytes": 114126,
+      "sha256": "aa85b64c5574438e04fe75bd12a4b98871cf11e2e8b8756211d1daa1efd83981"
+    },
+    {
+      "path": "apps/desktop/package.json",
+      "bytes": 4137,
+      "sha256": "4dea5508be236aa2c5e082238b42186f678cb38406a1576eee309a0c714d0532"
+    },
+    {
+      "path": "apps/desktop/src/community-failure.ts",
+      "bytes": 6037,
+      "sha256": "70050835831b7dc9c90f915d1a27366f78684ac95b9ab992a7bc43b2504c1d4b"
+    },
+    {
+      "path": "apps/desktop/src/community-profile-links.ts",
+      "bytes": 13262,
+      "sha256": "4567f2e2019fc864e9a03a5f1ad28bbac96ecc9712d25e156ae066ecf41bdd93"
+    },
+    {
+      "path": "apps/desktop/src/community-service.ts",
+      "bytes": 26082,
+      "sha256": "c907a85c7d5307d6ce3494e48189c883438b24f6875fe172bf4f4b719f605cfa"
+    },
+    {
+      "path": "apps/desktop/src/community-transaction.ts",
+      "bytes": 17195,
+      "sha256": "951dc01ca3d61de599af544680467873464ea80b653b6ee80ed8689a23e898b6"
+    },
+    {
+      "path": "apps/desktop/src/community-trial.ts",
+      "bytes": 5850,
+      "sha256": "cf3926c35a23b0160f153610fe923ea504812ea814caef4f9e8de25adaadcd4e"
+    },
+    {
+      "path": "apps/desktop/tests/community-failure.spec.ts",
+      "bytes": 6855,
+      "sha256": "c4ae90b4534af72d871885ad7d33dd1a412f001d7e04b0ec35317a9f20b72d39"
+    },
+    {
+      "path": "apps/desktop/tests/community-profile-links.spec.ts",
+      "bytes": 19340,
+      "sha256": "577c571e029a9cbe4c4065a2dcdcba6f03f737e36997b3afa90dc5c37335db00"
+    },
+    {
+      "path": "apps/desktop/tests/community-section.client.spec.tsx",
+      "bytes": 38792,
+      "sha256": "04590535dd9e4b7139de4756e3e3f8fbd5df31c09bad077921874e4a7b979154"
+    },
+    {
+      "path": "apps/desktop/tests/community-service.spec.ts",
+      "bytes": 29306,
+      "sha256": "39825581103ae9c94c7345073ae2265da2af6110dfe1ab976dcca29b4cb605f3"
+    },
+    {
+      "path": "apps/desktop/tests/community-transaction.spec.ts",
+      "bytes": 36248,
+      "sha256": "f5b51933d42c5892903be4c7634aa266049434565bd744375530cc1d955b123c"
+    },
+    {
+      "path": "apps/desktop/tests/community-trial.spec.ts",
+      "bytes": 12672,
+      "sha256": "5089774ea6975d9caf056aa89f3f31e411847b80d0e237209a6830c9b1c4a463"
+    },
+    {
+      "path": "pnpm-lock.yaml",
+      "bytes": 1037762,
+      "sha256": "33adaf0f9c5ffbcc2daf83d2c0ed8d48b18c98ccf5979b4f741bb4d233b1f2e2"
+    }
+  ],
+  "retainedPreviousRevision": "community-market-fix-20261010"
+}
