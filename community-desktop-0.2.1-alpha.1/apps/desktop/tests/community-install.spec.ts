@@ -1,0 +1,571 @@
+/** Archive adaptation uses private fixtures and an instance-local HTTP adapter; no plugin code or credentials are used. */
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { gzipSync } from 'node:zlib'
+import { createHash } from 'node:crypto'
+import { zipSync, strToU8 } from 'fflate'
+import { create as createTar, extract as extractTar, Header, list as listTar } from 'tar'
+import { afterEach, describe, expect, it } from 'vitest'
+import { prepareCommunityBundle, type CommunityInstallOptions } from '../src/community-install.ts'
+
+const roots: string[] = []
+afterEach(async () => { await Promise.all(roots.splice(0).map(root => rm(root, { recursive: true, force: true }))) })
+
+const intent = { id: 'addon', name: 'Untrusted catalogue title', version: 'latest', repo: '' }
+const sourceIntent = { ...intent, downloadUrl: 'https://codeload.github.com/example/community-addon/zip/refs/heads/main' }
+const manifest = {
+  name: '@example/community-addon', version: '1.2.3', type: 'module',
+  exports: { '.': './lib/index.js', './cordis.patch.yml': './cordis.patch.yml' },
+  dsh: { bundle: { patch: './cordis.patch.yml' } },
+}
+
+async function fixture(): Promise<{ root: string; artifacts: string }> {
+  const root = await mkdtemp(join(tmpdir(), 'dsh-community-fixture-'))
+  roots.push(root)
+  return { root, artifacts: join(root, 'artifacts') }
+}
+
+function zip(files: Record<string, string> = {}, metadata: object = manifest): Uint8Array {
+  return zipSync(Object.fromEntries(Object.entries({
+    'package/package.json': JSON.stringify(metadata),
+    'package/lib/index.js': 'export default function plugin() {}\n',
+    'package/cordis.patch.yml': '- insert:\n    - id: addon\n      name: "@example/community-addon"\n',
+    ...files,
+  }).map(([name, contents]) => [name, strToU8(contents)])))
+}
+
+function options(artifacts: string, bytes = zip()): CommunityInstallOptions {
+  return {
+    artifactDirectory: artifacts,
+    fetch: withMetadata(async () => new Response(new Uint8Array(bytes), { headers: { 'content-length': String(bytes.length) } }), bytes),
+  }
+}
+
+function release(bytes: Uint8Array, overrides: Record<string, unknown> = {}): Response {
+  return Response.json({ plugin: { id: intent.id, version: intent.version, status: 'published',
+    installVerification: { artifact: { packageVersion: intent.version, sourceVersion: manifest.version,
+      packageName: manifest.name, sha256: createHash('sha256').update(bytes).digest('hex'), bytes: bytes.length,
+      format: bytes[0] === 0x1f && bytes[1] === 0x8b ? 'tgz' : 'zip' } }, ...overrides } })
+}
+
+function withMetadata(fetcher: typeof fetch, bytes = zip()): typeof fetch {
+  return async (input, init) => {
+    const url = new URL(input instanceof Request ? input.url : String(input))
+    if (url.pathname === '/api/plugins/addon' && ['https://deepseek.stream', 'https://www.deepseek.stream'].includes(url.origin)) {
+      const headers = new Headers(init?.headers)
+      expect(headers.has('authorization') || headers.has('cookie')).toBe(false)
+      return release(bytes)
+    }
+    return fetcher(input, init)
+  }
+}
+
+function tarEntry(path: string, type: 'File' | 'SymbolicLink' | 'Link', data = ''): Uint8Array {
+  const content = Buffer.from(data)
+  const header = Buffer.alloc(512)
+  new Header({ path, type, size: content.length, mode: 0o600, linkpath: type === 'File' ? '' : '../outside' }).encode(header)
+  return new Uint8Array(gzipSync(Buffer.concat([header, content, Buffer.alloc((512 - content.length % 512) % 512), Buffer.alloc(1024)])))
+}
+
+describe('community bundle preparation', () => {
+  it('publishes an immutable npm tarball using manifest identity without touching installed files', async () => {
+    const { root, artifacts } = await fixture()
+    const installed = join(root, 'installed.js')
+    await writeFile(installed, 'previous installation')
+    const result = await prepareCommunityBundle(intent, options(artifacts))
+    expect(result).toMatchObject({ packageName: manifest.name, version: manifest.version, bundle: manifest.name })
+    expect(result.spec).toMatch(/[\\/]v1[\\/][a-f0-9]{64}\.tgz$/u)
+    const files: string[] = []
+    await listTar({ file: result.spec, onReadEntry: (entry) => { files.push(entry.path) } })
+    expect(files).toContain('package/package.json')
+    expect(files).toContain('package/lib/index.js')
+    expect(await readFile(installed, 'utf8')).toBe('previous installation')
+    expect(await readdir(join(artifacts, 'v1'))).toHaveLength(1)
+  })
+
+  it('shares a complete content-addressed artifact between overlapping preparations', async () => {
+    const { artifacts } = await fixture()
+    const [first, second] = await Promise.all([
+      prepareCommunityBundle(intent, options(artifacts)), prepareCommunityBundle(intent, options(artifacts)),
+    ])
+    expect(first.spec).toBe(second.spec)
+    expect(await readdir(join(artifacts, 'v1'))).toHaveLength(1)
+  })
+
+  it('omits tracked dependencies and repository metadata from a canonical GitHub ZIP while retaining the original and real plugin source', async () => {
+    const { root, artifacts } = await fixture()
+    const feature = 'export function double(value) { return value * 2 }\n'
+    const bytes = zip({ 'package/lib/index.js': feature, 'package/src/feature.ts': 'export const feature = 42\n',
+      'package/node_modules/stale/index.js': 'throw new Error("Tracked dependency must never execute")',
+      'package/.git/config': 'local repository metadata', 'package/.github/workflows/ci.yml': 'workflow metadata',
+      'package/.gitignore': 'node_modules\n', 'package/.gitattributes': '*.js text\n', 'package/.gitmodules': 'submodule metadata' })
+    const result = await prepareCommunityBundle(sourceIntent, options(artifacts, bytes))
+    expect(result.repositoryArchive).toBe(true)
+    expect(result.originalSha256).toBe(createHash('sha256').update(bytes).digest('hex'))
+    expect(result.originalSpec).toBeDefined()
+    if (result.originalSpec === undefined) throw new Error('Expected retained source archive')
+    expect(await readFile(result.originalSpec)).toEqual(Buffer.from(bytes))
+    const candidate = join(root, 'candidate')
+    await mkdir(candidate)
+    await extractTar({ file: result.spec, cwd: candidate })
+    expect(await readFile(join(candidate, 'package/lib/index.js'), 'utf8')).toBe(feature)
+    expect(await readFile(join(candidate, 'package/src/feature.ts'), 'utf8')).toBe('export const feature = 42\n')
+    const names: string[] = []
+    await listTar({ file: result.spec, onReadEntry: entry => { names.push(entry.path) } })
+    expect(names.some(name => /node_modules|\.git/u.test(name))).toBe(false)
+  })
+
+  it('preserves GitHub source classification for an immutable-original retry without downloading again', async () => {
+    const { artifacts } = await fixture()
+    const bytes = zip({ 'package/node_modules/stale/index.js': 'tracked dependency' })
+    const first = await prepareCommunityBundle(sourceIntent, options(artifacts, bytes))
+    if (first.originalSpec === undefined || first.originalSha256 === undefined || first.repositoryArchive !== true) {
+      throw new Error('Expected retained GitHub source archive')
+    }
+    let requests = 0
+    await expect(prepareCommunityBundle(sourceIntent, { artifactDirectory: artifacts,
+      originalArchive: { spec: first.originalSpec, sha256: first.originalSha256, repositoryArchive: first.repositoryArchive },
+      adaptation: { harnessVersion: '0.2.1-alpha.1', apiKey: '', force: true },
+      fetch: async () => { requests++; throw new Error('Retry must reuse immutable bytes') },
+    })).rejects.toMatchObject({ problem: 'adaptation-key-required' })
+    expect(requests).toBe(0)
+  })
+
+  it.each([
+    'https://registry.npmjs.org/example/-/example-1.2.3.tgz',
+    'https://codeload.github.com.evil.example/example/addon/zip/refs/heads/main',
+    'https://codeload.github.com/example/addon/releases/download/main.zip',
+  ])('retains strict package refusal when the final source is not a canonical GitHub archive: %s', async downloadUrl => {
+    const { artifacts } = await fixture()
+    const bytes = zip({ 'package/node_modules/stale/index.js': 'tracked dependency' })
+    await expect(prepareCommunityBundle({ ...intent, downloadUrl }, options(artifacts, bytes)))
+      .rejects.toMatchObject({ problem: 'incompatible-package' })
+  })
+
+  it('classifies the actual final redirect rather than the initial GitHub URL or an untrusted archive header', async () => {
+    const { artifacts } = await fixture()
+    let requests = 0
+    await expect(prepareCommunityBundle(sourceIntent, { artifactDirectory: artifacts, fetch: async () => {
+      if (++requests === 1) return new Response(null, { status: 302, headers: { location: 'https://cdn.example/source.zip' } })
+      return new Response(new Uint8Array(zip({ 'package/node_modules/stale/index.js': 'tracked dependency' })),
+        { headers: { 'x-repository-archive': 'true' } })
+    } })).rejects.toMatchObject({ problem: 'incompatible-package' })
+    expect(requests).toBe(2)
+  })
+
+  it.each([
+    { path: 'package/node_modules/../escape.js', problem: 'invalid-archive' },
+    { path: 'package/node_modules/CON.js', problem: 'invalid-archive' },
+    { path: 'package/.git/../escape.js', problem: 'invalid-archive' },
+  ])('validates an ignored repository path before skipping it: $path', async ({ path, problem }) => {
+    const { artifacts } = await fixture()
+    await expect(prepareCommunityBundle(sourceIntent, options(artifacts, zip({ [path]: 'must remain ignored' }))))
+      .rejects.toMatchObject({ problem })
+  })
+
+  it.each(['bytes', 'entries'])('counts skipped repository files toward expanded %s limits', async kind => {
+    const { artifacts } = await fixture()
+    const bytes = zip({ 'package/node_modules/large/index.js': 'x'.repeat(2_048), 'package/.git/config': 'metadata' })
+    await expect(prepareCommunityBundle(sourceIntent, { ...options(artifacts, bytes),
+      limits: kind === 'bytes' ? { maxExtractedBytes: 1_024 } : { maxEntries: 3 },
+    })).rejects.toMatchObject({ problem: 'too-large' })
+  })
+
+  it('rejects duplicate skipped metadata entries instead of bypassing duplicate validation', async () => {
+    const { artifacts } = await fixture()
+    await expect(prepareCommunityBundle(sourceIntent, options(artifacts, zip({
+      'package/.git/config': 'first', 'package/.GIT/config': 'second',
+    })))).rejects.toMatchObject({ problem: 'invalid-archive' })
+  })
+
+  it('closes a canonical source ZIP when cancellation arrives before extraction', async () => {
+    const { artifacts } = await fixture(), controller = new AbortController()
+    await expect(prepareCommunityBundle(sourceIntent, { ...options(artifacts), signal: controller.signal,
+      onProgress: progress => { if (progress.phase === 'validating') controller.abort() },
+    })).rejects.toMatchObject({ problem: 'cancelled' })
+    await expect(readdir(artifacts)).rejects.toMatchObject({ code: 'ENOENT' })
+  })
+
+  it('filters a canonical source tgz after validating every tar entry and preserves its compiled source', async () => {
+    const { root, artifacts } = await fixture(), source = join(root, 'source')
+    await mkdir(join(source, 'lib'), { recursive: true })
+    await mkdir(join(source, 'node_modules', 'stale'), { recursive: true })
+    await mkdir(join(source, '.git'), { recursive: true })
+    await writeFile(join(source, 'package.json'), JSON.stringify(manifest))
+    await writeFile(join(source, 'cordis.patch.yml'), '- insert: []\n')
+    await writeFile(join(source, 'lib/index.js'), 'export const feature = 42\n')
+    await writeFile(join(source, 'node_modules/stale/index.js'), 'tracked dependency')
+    await writeFile(join(source, '.git/config'), 'metadata')
+    const archive = join(root, 'source.tgz')
+    await createTar({ cwd: source, file: archive, gzip: true, prefix: 'package/' }, ['.'])
+    const prepared = await prepareCommunityBundle({ ...intent,
+      downloadUrl: 'https://codeload.github.com/example/community-addon/tar.gz/refs/heads/main',
+    }, options(artifacts, new Uint8Array(await readFile(archive))))
+    const names: string[] = []
+    await listTar({ file: prepared.spec, onReadEntry: entry => { names.push(entry.path) } })
+    expect(names).toContain('package/lib/index.js')
+    expect(names.some(name => /node_modules|\.git/u.test(name))).toBe(false)
+  })
+
+  it('rejects a symbolic link in skipped repository dependencies', async () => {
+    const { artifacts } = await fixture()
+    await expect(prepareCommunityBundle({ ...sourceIntent,
+      downloadUrl: 'https://codeload.github.com/example/community-addon/tar.gz/refs/heads/main',
+    }, options(artifacts, tarEntry('package/node_modules/link', 'SymbolicLink'))))
+      .rejects.toMatchObject({ problem: 'invalid-archive' })
+  })
+
+  it('accepts standard tgz packages and inert !!js configuration without changing source', async () => {
+    const { root, artifacts } = await fixture()
+    const source = join(root, 'source')
+    await mkdir(join(source, 'lib'), { recursive: true })
+    await writeFile(join(source, 'package.json'), JSON.stringify(manifest))
+    const patch = '- insert:\n    - id: addon\n      name: "@example/community-addon"\n      config:\n        endpoint: !!js process.env.COMMUNITY_ENDPOINT\n'
+    await writeFile(join(source, 'cordis.patch.yml'), patch)
+    await writeFile(join(source, 'lib/index.js'), 'export default function plugin() {}\n')
+    const archive = join(root, 'source.tgz')
+    await createTar({ cwd: source, file: archive, gzip: true, prefix: 'package/' }, ['.'])
+    const prepared = await prepareCommunityBundle(intent, options(artifacts, new Uint8Array(await readFile(archive))))
+    expect(prepared.packageName).toBe(manifest.name)
+    expect(await readFile(join(source, 'cordis.patch.yml'), 'utf8')).toBe(patch)
+  })
+
+  it('strips saved credentials permanently after a cross-origin redirect', async () => {
+    const { artifacts } = await fixture()
+    const requests: { url: string; authorization: string | null; cookie: string | null }[] = []
+    const bytes = zip()
+    const fetcher: typeof fetch = async (input, init) => {
+      const headers = new Headers(init?.headers)
+      const url = input instanceof Request ? input.url : input instanceof URL ? input.href : input
+      requests.push({ url, authorization: headers.get('authorization'), cookie: headers.get('cookie') })
+      if (requests.length === 1) return new Response(null, { status: 302, headers: { location: '/download-next' } })
+      if (requests.length === 2) return new Response(null, { status: 302, headers: { location: 'https://cdn.example/package.zip' } })
+      if (requests.length === 3) return new Response(null, { status: 302, headers: { location: 'https://deepseek.stream/download-final' } })
+      return new Response(new Uint8Array(bytes))
+    }
+    await prepareCommunityBundle(intent, { artifactDirectory: artifacts, token: 'fixture-account-token', fetch: withMetadata(fetcher, bytes) })
+    expect(requests.slice(0, 2).every(request => request.authorization === 'Bearer fixture-account-token')).toBe(true)
+    expect(requests.slice(2).every(request => request.authorization === null && request.cookie === null)).toBe(true)
+  })
+
+  it('does not send saved account credentials to an explicit third-party source', async () => {
+    const { artifacts } = await fixture()
+    await prepareCommunityBundle({ ...intent, downloadUrl: 'https://example.com/plugin.zip' }, {
+      artifactDirectory: artifacts, token: 'fixture-account-token', fetch: async (_input, init) => {
+        expect(new Headers(init?.headers).has('authorization')).toBe(false)
+        expect(new Headers(init?.headers).has('cookie')).toBe(false)
+        return new Response(new Uint8Array(zip()))
+      },
+    })
+  })
+
+  it('reports HTTP 401 as an account action', async () => {
+    const { artifacts } = await fixture()
+    await expect(prepareCommunityBundle(intent, { artifactDirectory: artifacts, fetch: async () => new Response(null, { status: 401 }) }))
+      .rejects.toMatchObject({ problem: 'authentication-required', statusCode: 401 })
+  })
+
+  it.each([
+    { body: JSON.stringify({ needUnlock: true }), problem: 'plugin-unlock-required' },
+    { body: JSON.stringify({ error: 'forbidden' }), problem: 'download-forbidden' },
+    { body: 'permission denied', problem: 'download-forbidden' },
+    { body: 'x'.repeat(9_000), problem: 'download-forbidden' },
+  ])('keeps HTTP 403 separate from sign-in: $problem', async ({ body, problem }) => {
+    const { artifacts } = await fixture()
+    await expect(prepareCommunityBundle(intent, { artifactDirectory: artifacts, fetch: async () => new Response(body, { status: 403 }) }))
+      .rejects.toMatchObject({ problem, statusCode: 403 })
+  })
+
+  it('bounds redirect loops', async () => {
+    const { artifacts } = await fixture()
+    let calls = 0
+    await expect(prepareCommunityBundle(intent, { artifactDirectory: artifacts, limits: { maxRedirects: 2 }, fetch: withMetadata(async () => {
+      calls++
+      return new Response(null, { status: 302, headers: { location: '/again' } })
+    }) })).rejects.toMatchObject({ problem: 'download-failed' })
+    expect(calls).toBe(3)
+  })
+
+  it.each(['declared', 'streamed'])('enforces the %s download byte limit', async (kind) => {
+    const { artifacts } = await fixture()
+    const bytes = zip()
+    await expect(prepareCommunityBundle({ ...intent, downloadUrl: 'https://example.com/limited.zip' }, {
+      artifactDirectory: artifacts, limits: { maxDownloadBytes: 8 },
+      fetch: async () => new Response(new Uint8Array(bytes), kind === 'declared' ? { headers: { 'content-length': String(bytes.length) } } : {}),
+    })).rejects.toMatchObject({ problem: 'too-large' })
+  })
+
+  it('cancels and closes the response stream before rejecting', async () => {
+    const { artifacts } = await fixture()
+    const controller = new AbortController()
+    let streamClosed = false
+    const stream = new ReadableStream<Uint8Array>({
+      start(owner) { owner.enqueue(strToU8('partial archive')) },
+      cancel() { streamClosed = true },
+    })
+    await expect(prepareCommunityBundle(intent, {
+      artifactDirectory: artifacts, signal: controller.signal, fetch: withMetadata(async () => new Response(stream)),
+      onProgress: (progress) => { if ((progress.receivedBytes ?? 0) > 0) controller.abort() },
+    })).rejects.toMatchObject({ problem: 'cancelled' })
+    expect(streamClosed).toBe(true)
+  })
+
+  it('times out an unresponsive request through its own AbortSignal', async () => {
+    const { artifacts } = await fixture()
+    const fetcher: typeof fetch = async (_input, init) => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () =>{  reject(new DOMException('Aborted', 'AbortError')) }, { once: true })
+    })
+    await expect(prepareCommunityBundle(intent, { artifactDirectory: artifacts, fetch: fetcher, limits: { timeoutMs: 5 } }))
+      .rejects.toMatchObject({ problem: 'timeout' })
+  })
+
+  it.each([
+    { label: 'traversal', files: { '../escape.js': 'bad' }, problem: 'invalid-archive' },
+    { label: 'Windows path alias', files: { 'package/CON.js': 'bad' }, problem: 'invalid-archive' },
+    { label: 'case-folded duplicate', files: { 'package/LIB/index.js': 'bad' }, problem: 'invalid-archive' },
+    { label: 'bundled node_modules', files: { 'package/node_modules/other/index.js': 'bad' }, problem: 'incompatible-package' },
+    { label: 'multiple package roots', files: { 'other/package.json': '{}' }, problem: 'incompatible-package' },
+    { label: 'malformed patch', files: { 'package/cordis.patch.yml': '[invalid' }, problem: 'incompatible-package' },
+  ])('refuses $label', async ({ files, problem }) => {
+    const { artifacts } = await fixture()
+    await expect(prepareCommunityBundle(intent, options(artifacts, zip(files)))).rejects.toMatchObject({ problem })
+  })
+
+  it.each([
+    { ...manifest, name: '../plugin' },
+    { ...manifest, version: 'latest' },
+    { ...manifest, dsh: {} },
+    { ...manifest, dsh: { bundle: { patch: '../../outside.yml' } } },
+    { ...manifest, exports: { '.': './src/index.ts' } },
+    { ...manifest, exports: { '.': './missing.js' } },
+  ])('refuses an incompatible package manifest: %j', async (metadata) => {
+    const { artifacts } = await fixture()
+    await expect(prepareCommunityBundle(intent, options(artifacts, zip({}, metadata)))).rejects.toMatchObject({ problem: 'incompatible-package' })
+  })
+
+  it('rejects a mismatched selected version', async () => {
+    const { artifacts } = await fixture()
+    await expect(prepareCommunityBundle({ ...intent, version: '9.0.0', downloadUrl: 'https://example.com/versioned.zip' }, options(artifacts)))
+      .rejects.toMatchObject({ problem: 'incompatible-package' })
+  })
+
+  it('bounds expanded archive bytes independently of compressed size', async () => {
+    const { artifacts } = await fixture()
+    await expect(prepareCommunityBundle(intent, { ...options(artifacts), limits: { maxExtractedBytes: 10 } }))
+      .rejects.toMatchObject({ problem: 'too-large' })
+  })
+
+  it.each([
+    { path: '../outside', type: 'File' as const, data: 'unsafe path', problem: 'invalid-archive' },
+    { path: 'package/link', type: 'SymbolicLink' as const, data: '', problem: 'invalid-archive' },
+    { path: 'package/link', type: 'Link' as const, data: '', problem: 'invalid-archive' },
+    { path: 'package/large', type: 'File' as const, data: 'x'.repeat(1024), problem: 'too-large' },
+  ])('rejects tar $type entries at $path without an unhandled stream exception', async ({ path, type, data, problem }) => {
+    const { artifacts } = await fixture()
+    await expect(prepareCommunityBundle(intent, { ...options(artifacts, tarEntry(path, type, data)), limits: { maxExtractedBytes: 128 } }))
+      .rejects.toMatchObject({ problem })
+  })
+
+  it('does not publish a package when cancelled after validation', async () => {
+    const { artifacts } = await fixture()
+    const controller = new AbortController()
+    await expect(prepareCommunityBundle(intent, {
+      ...options(artifacts), signal: controller.signal,
+      onProgress: (progress) => { if (progress.phase === 'packaging') controller.abort() },
+    })).rejects.toMatchObject({ problem: 'cancelled' })
+    await expect(readdir(artifacts)).rejects.toMatchObject({ code: 'ENOENT' })
+  })
+})
+
+describe('first-party immutable release selection', () => {
+  const legacyIntent = { id: 'dsh-voice-wake-1-1-0', name: 'Voice wake', version: '1.0.1', repo: '' }
+  const packageManifest = { ...manifest, name: 'dsh-voice-wake', version: '1.27.0' }
+  const packageZip = (): Uint8Array => zip({ 'package/cordis.patch.yml': '- insert:\n    - id: voice-wake\n      name: dsh-voice-wake\n' }, packageManifest)
+  function metadata(bytes: Uint8Array, artifactChanges: Record<string, unknown> = {}, pluginChanges: Record<string, unknown> = {}): Response {
+    return Response.json({ plugin: { ...legacyIntent, status: 'published', installVerification: { artifact: {
+      packageVersion: legacyIntent.version, sourceVersion: packageManifest.version, packageName: packageManifest.name,
+      sha256: createHash('sha256').update(bytes).digest('hex'), bytes: bytes.length, format: 'zip', ...artifactChanges,
+    } }, ...pluginChanges } })
+  }
+
+  it('keeps the old catalogue selector while validating the recorded voice-wake 1.27.0 archive without a model call', async () => {
+    const { artifacts } = await fixture(), bytes = packageZip()
+    const requests: string[] = []
+    let modelCalls = 0
+    const result = await prepareCommunityBundle(legacyIntent, { artifactDirectory: artifacts, token: 'fixture-account-token',
+      adaptation: { apiKey: 'fixture-official-key', harnessVersion: '0.2.1-alpha.1', fetch: async () => { modelCalls++; throw new Error('Native release must not call a model') } },
+      fetch: async (input, init) => {
+        const url = new URL(String(input)), headers = new Headers(init?.headers)
+        requests.push(url.pathname)
+        if (url.pathname === `/api/plugins/${legacyIntent.id}`) {
+          expect(headers.has('authorization') || headers.has('cookie')).toBe(false)
+          expect(init?.redirect).toBe('error')
+          return metadata(bytes)
+        }
+        expect(url.searchParams.get('id')).toBe(legacyIntent.id)
+        expect(url.searchParams.get('version')).toBe('1.0.1')
+        expect(url.searchParams.get('sha256')).toBe(createHash('sha256').update(bytes).digest('hex'))
+        expect(headers.get('cookie')).toBe('deepseek_hub_auth_token=fixture-account-token')
+        return new Response(new Uint8Array(bytes))
+      } })
+    expect(result).toMatchObject({ packageName: 'dsh-voice-wake', version: '1.27.0', adapted: false })
+    expect(modelCalls).toBe(0)
+    expect(requests).toEqual([`/api/plugins/${legacyIntent.id}`, '/api/plugins/download'])
+  })
+
+  it('refuses a changed catalogue release before downloading or adapting it', async () => {
+    const { artifacts } = await fixture(), bytes = packageZip()
+    let downloads = 0
+    await expect(prepareCommunityBundle(legacyIntent, { artifactDirectory: artifacts, fetch: async input => {
+      if (new URL(String(input)).pathname === `/api/plugins/${legacyIntent.id}`) {
+        return metadata(bytes, { packageVersion: '1.0.2' }, { version: '1.0.2' })
+      }
+      downloads++
+      return new Response(new Uint8Array(bytes))
+    } })).rejects.toMatchObject({ problem: 'download-failed', statusCode: 409 })
+    expect(downloads).toBe(0)
+    await expect(readdir(artifacts)).rejects.toMatchObject({ code: 'ENOENT' })
+  })
+
+  it.each([
+    { sha256: 'a'.repeat(64) },
+    { bytes: 1 },
+    { format: 'tgz' },
+  ])('refuses bytes inconsistent with immutable metadata without invoking a model: %j', async changes => {
+    const { artifacts } = await fixture(), bytes = packageZip()
+    let modelCalls = 0
+    await expect(prepareCommunityBundle(legacyIntent, { artifactDirectory: artifacts,
+      adaptation: { apiKey: 'fixture-official-key', harnessVersion: '0.2.1-alpha.1', fetch: async () => { modelCalls++; throw new Error('Checksum errors are not adaptable') } },
+      fetch: async input => new URL(String(input)).pathname === `/api/plugins/${legacyIntent.id}`
+        ? metadata(bytes, changes) : new Response(new Uint8Array(bytes)),
+    })).rejects.toMatchObject({ problem: 'invalid-archive' })
+    expect(modelCalls).toBe(0)
+    await expect(readdir(artifacts)).rejects.toMatchObject({ code: 'ENOENT' })
+  })
+
+  it.each([{ sourceVersion: '1.27.1' }, { packageName: 'other-plugin' }])('refuses a manifest that differs from the recorded release without AI renaming: %j', async changes => {
+    const { artifacts } = await fixture(), bytes = packageZip()
+    let modelCalls = 0
+    await expect(prepareCommunityBundle(legacyIntent, { artifactDirectory: artifacts,
+      adaptation: { apiKey: 'fixture-official-key', harnessVersion: '0.2.1-alpha.1', fetch: async () => { modelCalls++; throw new Error('Identity errors are not adaptable') } },
+      fetch: async input => new URL(String(input)).pathname === `/api/plugins/${legacyIntent.id}`
+        ? metadata(bytes, changes) : new Response(new Uint8Array(bytes)),
+    })).rejects.toMatchObject({ problem: 'incompatible-package' })
+    expect(modelCalls).toBe(0)
+    await expect(readdir(artifacts)).rejects.toMatchObject({ code: 'ENOENT' })
+  })
+
+  it.each([
+    { sha256: undefined }, { bytes: undefined }, { format: 'rar' }, { packageVersion: '9.0.0' },
+    { sourceVersion: 'latest' }, { packageName: '../other-plugin' },
+  ])('requires complete, exact first-party release metadata: %j', async changes => {
+    const { artifacts } = await fixture(), bytes = packageZip()
+    let downloads = 0
+    await expect(prepareCommunityBundle(legacyIntent, { artifactDirectory: artifacts, fetch: async input => {
+      if (new URL(String(input)).pathname === `/api/plugins/${legacyIntent.id}`) return metadata(bytes, changes)
+      downloads++
+      return new Response(new Uint8Array(bytes))
+    } })).rejects.toMatchObject({ problem: 'download-failed' })
+    expect(downloads).toBe(0)
+  })
+
+  it('refuses latest without a recorded exact source release', async () => {
+    const { artifacts } = await fixture(), bytes = packageZip()
+    await expect(prepareCommunityBundle({ ...legacyIntent, version: 'latest' }, { artifactDirectory: artifacts,
+      fetch: async () => metadata(bytes, { packageVersion: 'latest', sourceVersion: undefined }, { version: 'latest' }),
+    })).rejects.toMatchObject({ problem: 'download-failed', message: expect.stringContaining('exact package version') })
+  })
+
+  it.each([{ id: 'other-plugin' }, { status: 'unlisted' }])('refuses metadata for a different or unpublished listing: %j', async changes => {
+    const { artifacts } = await fixture(), bytes = packageZip()
+    await expect(prepareCommunityBundle(legacyIntent, { artifactDirectory: artifacts,
+      fetch: async () => metadata(bytes, {}, changes),
+    })).rejects.toMatchObject({ problem: 'download-failed' })
+  })
+
+  it('accepts a frozen TGZ selector with the recorded source identity and exact digest', async () => {
+    const { root, artifacts } = await fixture(), source = join(root, 'source')
+    await mkdir(join(source, 'lib'), { recursive: true })
+    await writeFile(join(source, 'package.json'), JSON.stringify(packageManifest))
+    await writeFile(join(source, 'lib/index.js'), 'export default function plugin() {}\n')
+    await writeFile(join(source, 'cordis.patch.yml'), '- insert: []\n')
+    const archive = join(root, 'source.tgz')
+    await createTar({ cwd: source, file: archive, gzip: true, prefix: 'package/' }, ['.'])
+    const bytes = new Uint8Array(await readFile(archive)), sha256 = createHash('sha256').update(bytes).digest('hex')
+    const downloadUrl = `https://www.deepseek.stream/api/plugins/artifacts/${legacyIntent.id}/${legacyIntent.version}/${sha256}.tgz`
+    const result = await prepareCommunityBundle({ ...legacyIntent, version: packageManifest.version, downloadUrl }, {
+      artifactDirectory: artifacts, fetch: async input => new URL(String(input)).pathname === `/api/plugins/${legacyIntent.id}`
+        ? metadata(bytes, { format: 'tgz' }) : new Response(new Uint8Array(bytes)),
+    })
+    expect(result).toMatchObject({ packageName: packageManifest.name, version: packageManifest.version, originalSha256: sha256 })
+  })
+
+  it('preserves a paid signed download URL on www without sending account credentials there', async () => {
+    const { artifacts } = await fixture(), bytes = packageZip()
+    const downloadUrl = `https://www.deepseek.stream/api/plugins/install-artifact/${'f'.repeat(64)}`
+    let downloads = 0
+    const result = await prepareCommunityBundle({ ...legacyIntent, version: packageManifest.version, downloadUrl }, {
+      artifactDirectory: artifacts, token: 'fixture-account-token', fetch: async (input, init) => {
+        const url = new URL(String(input))
+        expect(new Headers(init?.headers).has('authorization') || new Headers(init?.headers).has('cookie')).toBe(false)
+        if (url.pathname === `/api/plugins/${legacyIntent.id}`) return metadata(bytes, {}, { price: 50 })
+        expect(url.href).toBe(downloadUrl)
+        downloads++
+        return new Response(new Uint8Array(bytes))
+      },
+    })
+    expect(result.version).toBe(packageManifest.version)
+    expect(downloads).toBe(1)
+  })
+
+  it('refuses a signed-link version that differs from the recorded source version', async () => {
+    const { artifacts } = await fixture(), bytes = packageZip()
+    let downloads = 0
+    await expect(prepareCommunityBundle({ ...legacyIntent,
+      downloadUrl: `https://deepseek.stream/api/plugins/install-artifact/${'f'.repeat(64)}` }, {
+      artifactDirectory: artifacts, fetch: async input => {
+        if (new URL(String(input)).pathname === `/api/plugins/${legacyIntent.id}`) return metadata(bytes)
+        downloads++
+        return new Response(new Uint8Array(bytes))
+      },
+    })).rejects.toMatchObject({ problem: 'invalid-intent' })
+    expect(downloads).toBe(0)
+  })
+
+  it.each(['other-plugin', 'dsh-voice-wake-1-1-0'])('binds explicit download selectors to the current catalogue: %s', async selectedId => {
+    const { artifacts } = await fixture(), bytes = packageZip()
+    const version = selectedId === legacyIntent.id ? '1.0.2' : legacyIntent.version
+    await expect(prepareCommunityBundle({ ...legacyIntent, version: packageManifest.version,
+      downloadUrl: `https://deepseek.stream/api/plugins/download?id=${selectedId}&version=${version}` }, {
+      artifactDirectory: artifacts, fetch: async () => metadata(bytes),
+    })).rejects.toMatchObject({ problem: 'invalid-intent' })
+  })
+
+  it('times out metadata acquisition without allocating or publishing an archive', async () => {
+    const { artifacts } = await fixture()
+    let settled = false
+    const fetcher: typeof fetch = async (_input, init) => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => {
+        settled = true
+        reject(new DOMException('Aborted', 'AbortError'))
+      }, { once: true })
+    })
+    await expect(prepareCommunityBundle(legacyIntent, { artifactDirectory: artifacts, fetch: fetcher, limits: { timeoutMs: 5 } }))
+      .rejects.toMatchObject({ problem: 'timeout', message: expect.stringContaining('metadata timed out') })
+    expect(settled).toBe(true)
+    await expect(readdir(artifacts)).rejects.toMatchObject({ code: 'ENOENT' })
+  })
+
+  it.each([
+    { label: 'foreign redirect', response: () => new Response(null, { status: 302, headers: { location: 'https://foreign.example/metadata' } }) },
+    { label: 'invalid content type', response: () => new Response('not JSON', { headers: { 'content-type': 'text/plain' } }) },
+  ])('refuses $label metadata without exposing a signed URL', async supplied => {
+    const { artifacts } = await fixture()
+    const token = 'f'.repeat(64)
+    await expect(prepareCommunityBundle({ ...legacyIntent, version: packageManifest.version,
+      downloadUrl: `https://deepseek.stream/api/plugins/install-artifact/${token}` }, {
+      artifactDirectory: artifacts, fetch: async () => supplied.response(),
+    })).rejects.toMatchObject({ problem: 'download-failed', message: expect.not.stringContaining(token) })
+  })
+})

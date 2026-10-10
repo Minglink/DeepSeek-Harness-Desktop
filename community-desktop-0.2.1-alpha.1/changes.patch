@@ -1,0 +1,1430 @@
+diff --git a/apps/desktop/src/api-vault.ts b/apps/desktop/src/api-vault.ts
+index 3b6d728..7a8dbe1 100644
+--- a/apps/desktop/src/api-vault.ts
++++ b/apps/desktop/src/api-vault.ts
+@@ -4,7 +4,9 @@ import path from 'node:path'
+ import os from 'node:os'
+ import https from 'node:https'
+ import http from 'node:http'
++import { randomUUID } from 'node:crypto'
+ import type { CommunityAdaptationLimits } from './community-adaptation.ts'
++import type { CommunityLoginProblem } from './community-types.ts'
+ 
+ function isRecord(value: unknown): value is Record<string, unknown> {
+   return value !== null && typeof value === 'object' && !Array.isArray(value)
+@@ -537,6 +539,11 @@ export function readCommunityAccount(): CommunityAccount | null {
+   return cfg.community ?? null
+ }
+ 
++/**
++ * Atomically update the community session while retaining every other valid configuration field.
++ * @param account - Next main-owned session, or null to remove only that session.
++ * @throws If the existing JSON cannot be read or the replacement cannot be written.
++ */
+ export function saveCommunityAccount(account: CommunityAccount | null): void {
+   const { home, configJson } = getConfigPaths()
+   if (!fs.existsSync(home)) {
+@@ -544,10 +551,9 @@ export function saveCommunityAccount(account: CommunityAccount | null): void {
+   }
+   let current: Record<string, unknown> = {}
+   if (fs.existsSync(configJson)) {
+-    try {
+-      const parsed: unknown = JSON.parse(fs.readFileSync(configJson, 'utf8'))
+-      if (isRecord(parsed)) current = parsed
+-    } catch {}
++    const parsed: unknown = JSON.parse(fs.readFileSync(configJson, 'utf8'))
++    if (!isRecord(parsed)) throw new Error('Desktop configuration must be a JSON object')
++    current = parsed
+   }
+   if (account) {
+     current.community = account
+@@ -555,7 +561,16 @@ export function saveCommunityAccount(account: CommunityAccount | null): void {
+     delete current.community
+   }
+   current.updatedAt = new Date().toISOString()
+-  fs.writeFileSync(configJson, JSON.stringify(current, null, 2) + '\n', 'utf8')
++  const temporary = `${configJson}.${randomUUID()}.tmp`
++  const descriptor = fs.openSync(temporary, 'wx', 0o600)
++  try {
++    try { fs.writeFileSync(descriptor, JSON.stringify(current, null, 2) + '\n', 'utf8') }
++    finally { fs.closeSync(descriptor) }
++    fs.renameSync(temporary, configJson)
++  } catch (error) {
++    fs.rmSync(temporary, { force: true })
++    throw error
++  }
+ }
+ 
+ /**
+@@ -563,37 +578,57 @@ export function saveCommunityAccount(account: CommunityAccount | null): void {
+  * @param emailOrUsername - User-entered community identity.
+  * @param password - User-entered password, sent only to the community HTTPS origin.
+  * @param request - Instance-local Fetch adapter for deterministic network tests.
+- * @returns A main-only outcome; product IPC projects it to a credential-free result.
++ * @returns A main-only outcome with fixed failure codes; failed sign-in preserves existing configuration.
+  */
+ export async function loginCommunityAccount(
+   emailOrUsername: string, password: string, request: typeof globalThis.fetch = globalThis.fetch,
+-): Promise<{ success: boolean; token?: string }> {
++): Promise<{ success: true; token: string } | { success: false; problem: CommunityLoginProblem }> {
++  let response: Response
+   try {
+-    const response = await request('https://deepseek.stream/api/auth/login', {
++    response = await request('https://deepseek.stream/api/auth/login', {
+       method: 'POST', redirect: 'error', signal: AbortSignal.timeout(15_000), credentials: 'omit',
+-      headers: { 'content-type': 'application/json', 'user-agent': 'DeepSeek-Harness-Community' },
++      headers: { 'content-type': 'application/json', 'user-agent': 'DeepSeek-Harness-Community', origin: 'https://deepseek.stream' },
+       body: JSON.stringify({ emailOrUsername, password }),
+     })
+-    if (!response.ok) { await response.body?.cancel(); return { success: false } }
++  } catch (_error) {
++    // Transport errors contain private request details and never cross product IPC.
++    return { success: false, problem: { code: 'login-network-failed' } }
++  }
++  if (!response.ok) {
++    try { await response.body?.cancel() }
++    catch (_error) { /* The HTTP status remains available when cancelling its body fails. */ }
++    const code = response.status === 401 ? 'login-invalid-credentials'
++      : response.status === 403 ? 'login-forbidden'
++        : response.status === 429 ? 'login-rate-limited'
++          : response.status === 400 ? 'invalid-account' : 'login-server-failed'
++    return { success: false, problem: { code } }
++  }
++  let account: CommunityAccount
++  try {
+     const reader = response.body?.getReader()
+-    if (reader === undefined) return { success: false }
++    if (reader === undefined) return { success: false, problem: { code: 'login-invalid-response' } }
+     const chunks: Uint8Array[] = []
+     let size = 0
+     try {
+       for (;;) {
+-        const next = await reader.read()
++        let next: ReadableStreamReadResult<Uint8Array>
++        try { next = await reader.read() }
++        catch (_error) { return { success: false, problem: { code: 'login-network-failed' } } }
+         if (next.done) break
+         size += next.value.byteLength
+         if (size > 1024 * 1024) throw new Error('Community login response is too large')
+         chunks.push(next.value)
+       }
+-    } finally { await reader.cancel() }
++    } finally {
++      try { await reader.cancel() }
++      catch (_error) { /* The bounded response has already been read or rejected. */ }
++    }
+     const data: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+-    if (!isRecord(data) || data.success !== true || !isRecord(data.user)) return { success: false }
++    if (!isRecord(data) || data.success !== true || !isRecord(data.user)) return { success: false, problem: { code: 'login-invalid-response' } }
+     const cookie = response.headers.getSetCookie()
+       .map(value => /(?:^|;\s*)deepseek_hub_auth_token=([^;]+)/u.exec(value)?.[1]).find(value => value !== undefined)
+     const token = cookie ?? (typeof data.token === 'string' ? data.token : '')
+-    const account: unknown = {
++    const candidate: unknown = {
+       userId: typeof data.user.id === 'string' ? data.user.id
+         : typeof data.user.id === 'number' && Number.isFinite(data.user.id) ? String(data.user.id) : '',
+       username: typeof data.user.username === 'string' ? data.user.username : emailOrUsername,
+@@ -601,13 +636,18 @@ export async function loginCommunityAccount(
+       token, savedAt: Date.now(),
+       ...(typeof data.user.role === 'string' ? { role: data.user.role } : {}),
+     }
+-    if (!isCommunityAccount(account) || account.userId === '') return { success: false }
++    if (!isCommunityAccount(candidate) || candidate.userId === '') return { success: false, problem: { code: 'login-invalid-response' } }
++    account = candidate
++  } catch (_error) {
++    // Invalid JSON, oversized replies, and malformed account metadata are not login credentials failures.
++    return { success: false, problem: { code: 'login-invalid-response' } }
++  }
++  try {
+     saveCommunityAccount(account)
+-    return { success: true, token: account.token }
+   } catch (_error) {
+-    // Network, parsing, and storage errors share safe localized feedback in the product panel.
+-    return { success: false }
++    return { success: false, problem: { code: 'login-storage-failed' } }
+   }
++  return { success: true, token: account.token }
+ }
+ 
+ export function logoutCommunityAccount(): void {
+
+diff --git a/apps/desktop/src/community-types.ts b/apps/desktop/src/community-types.ts
+index db10d33..ad1f01d 100644
+--- a/apps/desktop/src/community-types.ts
++++ b/apps/desktop/src/community-types.ts
+@@ -55,6 +55,18 @@ export interface CommunityAccountSummary {
+   readonly email: string
+ }
+ 
++/** Sign-in failures safe to transport without credentials or server diagnostics. */
++export type CommunityLoginFailureCode = 'invalid-account' | 'login-invalid-credentials' | 'login-forbidden'
++  | 'login-rate-limited' | 'login-network-failed' | 'login-storage-failed' | 'login-invalid-response' | 'login-server-failed'
++
++/** A fixed sign-in code selected by the main process. */
++export interface CommunityLoginProblem {
++  readonly code: CommunityLoginFailureCode
++}
++
++/** A persisted sign-in result; success exposes no session token to the renderer. */
++export type CommunityLoginResult = { readonly ok: true } | { readonly ok: false; readonly problem: CommunityLoginProblem }
++
+ /** Localized failures are selected in the client from this code; details are optional diagnostics. */
+ export interface CommunityProblem {
+   readonly code: string
+@@ -123,12 +135,13 @@ export interface DesktopCommunityApi {
+   getState(): Promise<CommunityState>
+   catalog(refresh?: boolean, query?: CommunityCatalogQuery): Promise<CommunityCatalog>
+   detail(id: string): Promise<CommunityPluginDetail>
+-  openWebsite(path?: string): Promise<void>
++  /** @param target - Opens only the community homepage or registration page in the system browser when selected. */
++  openWebsite(path?: string, target?: 'system-browser'): Promise<void>
+   install(intent: Pick<CommunityInstallIntent, 'id' | 'name' | 'version'>): Promise<CommunityTask>
+   cancel(id: CommunityTaskId): Promise<void>
+   setEnabled(name: string, enabled: boolean): Promise<CommunityChange>
+   remove(name: string): Promise<CommunityChange>
+-  login(email: string, password: string): Promise<{ ok: boolean; problem?: CommunityProblem }>
++  login(email: string, password: string): Promise<CommunityLoginResult>
+   logout(): Promise<void>
+   takePending(): Promise<CommunityInstallIntent | null>
+   /** @returns The current pending request, without consuming it during a renderer reload. */
+
+diff --git a/apps/desktop/src/main.ts b/apps/desktop/src/main.ts
+index b6b92d6..8c72dc4 100644
+--- a/apps/desktop/src/main.ts
++++ b/apps/desktop/src/main.ts
+@@ -54,9 +54,10 @@ import { DesktopUpdateDialog, type UpdateDialogOptions } from './update-dialog.t
+ import { DesktopBrowserGuests } from './browser-guests.ts'
+ import { resolveDshHome } from '@deepseek-ai/dsh-home-paths'
+ import { readCommunityAccount, readConfig, loginCommunityAccount, logoutCommunityAccount } from './api-vault.ts'
++import type { CommunityLoginResult } from './community-types.ts'
+ import { parseDshUrl, type DshProtocolParams } from './installer.ts'
+ import { DesktopCommunityService } from './community-service.ts'
+-import { DesktopCommunityNavigation } from './community-navigation.ts'
++import { DesktopCommunityNavigation, communityWebsiteDestination } from './community-navigation.ts'
+ import { invokeCommunityBackend } from './community-backend.ts'
+ import { CommunityProfileTransaction, CommunityTransactionError, communityTrialEnvironment } from './community-transaction.ts'
+ import { assertCommunityBundleReady, trialCommunityBundle } from './community-trial.ts'
+@@ -1075,9 +1076,10 @@ async function main(): Promise<void> {
+     if (typeof id !== 'string') throw new Error('Invalid community item')
+     return community.detail(id)
+   })
+-  communityHandler(DESKTOP_IPC.communityWebsite, async (path) => {
+-    if (path !== undefined && (typeof path !== 'string' || !/^\/(?:plugins(?:\/[a-z0-9._-]+)?|auth\/(?:login|register)|profile|dashboard|guide)?$/u.test(path))) throw new Error('Invalid community destination')
+-    await openHubMarketWindow(currentDesktopLocale().messages.communityHubTitle, typeof path === 'string' ? path : '/')
++  communityHandler(DESKTOP_IPC.communityWebsite, async (path, target) => {
++    const destination = communityWebsiteDestination(path, target)
++    if (destination.target === 'system-browser') await shell.openExternal(destination.url)
++    else await openHubMarketWindow(currentDesktopLocale().messages.communityHubTitle, destination.path)
+   })
+   communityHandler(DESKTOP_IPC.communityInstall, intent => community.install(intent))
+   communityHandler(DESKTOP_IPC.communityCancel, id => community.cancel(id))
+@@ -1086,11 +1088,11 @@ async function main(): Promise<void> {
+   communityHandler(DESKTOP_IPC.communityPending, () => community.takePending())
+   communityHandler(DESKTOP_IPC.communityClaimOpen, () => marketNavigation.claim())
+   communityHandler(DESKTOP_IPC.communityAcknowledgeOpen, (request) => { marketNavigation.acknowledge(request) })
+-  communityHandler(DESKTOP_IPC.communityLogin, async (email, password) => {
++  communityHandler(DESKTOP_IPC.communityLogin, async (email, password): Promise<CommunityLoginResult> => {
+     if (typeof email !== 'string' || email.length < 1 || email.length > 320
+       || typeof password !== 'string' || password.length < 1 || password.length > 4096) return { ok: false, problem: { code: 'invalid-account' } }
+     const result = await loginCommunityAccount(email, password)
+-    if (!result.success || !result.token) return { ok: false, problem: { code: 'login-failed' } }
++    if (!result.success) return { ok: false, problem: result.problem }
+     try { await injectCommunityCookie() }
+     catch (_error) { console.warn('Community Hub cookie could not be updated') }
+     mainWindow?.webContents.send(DESKTOP_IPC.communityChanged)
+
+diff --git a/apps/desktop/src/community-locales.ts b/apps/desktop/src/community-locales.ts
+index 87757d4..adc9b02 100644
+--- a/apps/desktop/src/community-locales.ts
++++ b/apps/desktop/src/community-locales.ts
+@@ -127,11 +127,21 @@ export const communityEn = {
+   account: 'Community account',
+   signInTitle: 'Sign in to the community',
+   signInDescription: 'Use your deepseek.stream account to download community plugins',
++  registerCommunityAccount: 'Create a community account',
++  openCommunityWebsite: 'Open Stream community',
++  registrationReturnHint: 'Open in your default browser. After registering, return to this app to sign in and continue any confirmed installation',
++  loginWebsiteFailed: 'The browser could not be opened. Try again',
+   signInContinue: 'Sign in and continue installing',
+   username: 'Email or username',
+   password: 'Password',
+   loginRequired: 'Sign in again to continue installing',
+   loginFailed: 'Sign-in failed. Check your account details and try again',
++  loginForbidden: 'The community refused this sign-in request. Update the desktop app or try the community website',
++  loginRateLimited: 'Too many sign-in attempts. Wait a while and try again',
++  loginNetworkFailed: 'Could not connect to the community. Check your connection and try again',
++  loginStorageFailed: 'Sign-in could not be saved. Check local storage permissions or available space and try again',
++  loginInvalidResponse: 'The community returned an invalid sign-in response. Try again later',
++  loginServerFailed: 'The community sign-in service is unavailable. Try again later',
+   loginFields: 'Enter your email or username and password',
+   actionFailed: 'The operation failed. Try again',
+   installFailed: 'Installation failed. You can retry this task',
+@@ -293,11 +303,21 @@ export const communityZh: Record<CommunityLocaleKey, string> = {
+   account: '社区账号',
+   signInTitle: '登录深流社区',
+   signInDescription: '使用 deepseek.stream 账号下载社区插件',
++  registerCommunityAccount: '注册社区账号',
++  openCommunityWebsite: '打开深流社区',
++  registrationReturnHint: '在系统默认浏览器中打开。注册后请返回桌面登录，继续已确认的安装',
++  loginWebsiteFailed: '无法打开浏览器，请重试',
+   signInContinue: '登录并继续安装',
+   username: '邮箱或用户名',
+   password: '密码',
+   loginRequired: '请重新登录后继续安装',
+   loginFailed: '登录失败，请检查账号信息后重试',
++  loginForbidden: '社区拒绝了本次登录请求，请更新桌面客户端或尝试社区网站',
++  loginRateLimited: '登录尝试过于频繁，请稍后重试',
++  loginNetworkFailed: '无法连接深流社区，请检查网络后重试',
++  loginStorageFailed: '登录状态无法保存，请检查本地存储权限或剩余空间后重试',
++  loginInvalidResponse: '社区返回的登录信息异常，请稍后重试',
++  loginServerFailed: '社区登录服务暂不可用，请稍后重试',
+   loginFields: '请输入邮箱或用户名及密码',
+   actionFailed: '操作失败，请重试',
+   installFailed: '安装失败，可以重试这个任务',
+
+diff --git a/apps/desktop/plugins/dsh-community/src/client/CommunitySection.tsx b/apps/desktop/plugins/dsh-community/src/client/CommunitySection.tsx
+index 4fe642d..795af0b 100644
+--- a/apps/desktop/plugins/dsh-community/src/client/CommunitySection.tsx
++++ b/apps/desktop/plugins/dsh-community/src/client/CommunitySection.tsx
+@@ -9,7 +9,7 @@ import {
+ import type {
+   CommunityBundle, CommunityCatalog, CommunityChange, CommunityInstallIntent,
+   CommunityPlugin, CommunityProblem, CommunityState, CommunityTask, DesktopCommunityApi,
+-  CommunityTaskId, CommunityCatalogQuery, CommunityPluginDetail,
++  CommunityTaskId, CommunityCatalogQuery, CommunityPluginDetail, CommunityLoginFailureCode,
+ } from '../../../../src/community-types.ts'
+ import { communityText, type CommunityLocaleKey } from './community-locales.ts'
+ import css from './Community.module.css'
+@@ -58,6 +58,13 @@ function requiresLogin(problem: CommunityProblem | undefined): boolean {
+   return problem !== undefined && /auth|login|unauthori[sz]ed|session-expired/.test(problem.code)
+ }
+ 
++const LOGIN_FAILURE_KEYS = {
++  'invalid-account': 'loginFields', 'login-invalid-credentials': 'loginFailed',
++  'login-forbidden': 'loginForbidden', 'login-rate-limited': 'loginRateLimited',
++  'login-network-failed': 'loginNetworkFailed', 'login-storage-failed': 'loginStorageFailed',
++  'login-invalid-response': 'loginInvalidResponse', 'login-server-failed': 'loginServerFailed',
++} satisfies Record<CommunityLoginFailureCode, CommunityLocaleKey>
++
+ function problemCopy(problem: CommunityProblem | undefined, t: Translate, fallback: CommunityLocaleKey): string {
+   if (problem === undefined) return t(fallback)
+   if (problem.code === 'market-required') return t('marketProtected')
+@@ -404,6 +411,12 @@ export function CommunitySection({ api, locale }: CommunitySectionProps): ReactN
+     setLoginError(null)
+   }
+ 
++  const openAccountWebsite = (path: '/' | '/auth/register'): void => {
++    void api.openWebsite(path, 'system-browser').catch(() => {
++      if (mounted.current) setLoginError('loginWebsiteFailed')
++    })
++  }
++
+   const signIn = async (): Promise<void> => {
+     if (loginBusy) return
+     if (email.trim() === '' || password === '') { setLoginError('loginFields'); return }
+@@ -412,7 +425,7 @@ export function CommunitySection({ api, locale }: CommunitySectionProps): ReactN
+     try {
+       const result = await api.login(email.trim(), password)
+       if (!mounted.current) return
+-      if (!result.ok) { setLoginError('loginFailed'); return }
++      if (!result.ok) { setLoginError(LOGIN_FAILURE_KEYS[result.problem.code]); return }
+       const intent = resumedIntent.current
+       resumedIntent.current = null
+       setPassword('')
+@@ -420,7 +433,7 @@ export function CommunitySection({ api, locale }: CommunitySectionProps): ReactN
+       refreshState.current()
+       if (intent !== null) await performInstall(intent)
+     } catch {
+-      if (mounted.current) setLoginError('loginFailed')
++      if (mounted.current) setLoginError('loginServerFailed')
+     } finally {
+       if (mounted.current) setLoginBusy(false)
+     }
+@@ -715,6 +728,13 @@ export function CommunitySection({ api, locale }: CommunitySectionProps): ReactN
+           <Input type="password" value={password} autoComplete="current-password"
+             disabled={loginBusy} onChange={event => { setPassword(event.target.value) }} />
+         </label>
++        <div className={css.actions}>
++          <Button size="sm" variant="outline" type="button" disabled={loginBusy}
++            onClick={() => { openAccountWebsite('/auth/register') }}>{t('registerCommunityAccount')}</Button>
++          <Button size="sm" variant="ghost" type="button" disabled={loginBusy}
++            onClick={() => { openAccountWebsite('/') }}>{t('openCommunityWebsite')}</Button>
++        </div>
++        <p className={css.meta}>{t('registrationReturnHint')}</p>
+         {loginError !== null && <p className={css.problem} role="alert">{t(loginError)}</p>}
+       </form>
+     </Modal>}
+
+diff --git a/apps/desktop/tests/community-account.spec.ts b/apps/desktop/tests/community-account.spec.ts
+index 3cef1ac..06f0608 100644
+--- a/apps/desktop/tests/community-account.spec.ts
++++ b/apps/desktop/tests/community-account.spec.ts
+@@ -1,5 +1,6 @@
+ /** Community account persistence uses private per-case data and an instance-local HTTP adapter. */
+-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
++import fs from 'node:fs'
++import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+ import { tmpdir } from 'node:os'
+ import { join } from 'node:path'
+ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+@@ -12,6 +13,7 @@ beforeEach(async () => {
+   for (const key of ['DEEPSEEK_API_KEY', 'DEEPSEEK_BASE_URL', 'DEEPSEEK_MODEL']) vi.stubEnv(key, '')
+ })
+ afterEach(async () => {
++  vi.restoreAllMocks()
+   vi.unstubAllEnvs()
+   await rm(directory, { recursive: true, force: true })
+ })
+@@ -35,6 +37,12 @@ describe('community account storage', () => {
+     const result = await loginCommunityAccount('Example', 'fixture-password', async (input, init) => {
+       expect(input).toBe('https://deepseek.stream/api/auth/login')
+       expect(init?.redirect).toBe('error')
++      expect(init?.credentials).toBe('omit')
++      const headers = new Headers(init?.headers)
++      expect(headers.get('origin')).toBe('https://deepseek.stream')
++      expect(headers.get('content-type')).toBe('application/json')
++      expect(headers.get('cookie')).toBeNull()
++      expect(headers.get('authorization')).toBeNull()
+       if (typeof init?.body !== 'string') throw new Error('Expected a JSON login request')
+       const payload: unknown = JSON.parse(init.body)
+       expect(payload).toEqual({ emailOrUsername: 'Example', password: 'fixture-password' })
+@@ -46,16 +54,82 @@ describe('community account storage', () => {
+     expect(readCommunityAccount()?.username).toBe('Example')
+   })
+ 
+-  it.each(['missing-token', 'invalid-json', 'http-failure', 'network-failure'])('keeps existing credentials after %s', async (failure) => {
++  it.each([
++    ['missing-token', 'login-invalid-response'], ['invalid-json', 'login-invalid-response'],
++    ['http-failure', 'login-invalid-credentials'], ['network-failure', 'login-network-failed'],
++    ['response-disconnect', 'login-network-failed'],
++  ])('keeps existing credentials after %s', async (failure, code) => {
+     saveCommunityAccount(account)
+     const before = await readFile(join(directory, 'desktop-config.json'), 'utf8')
+     const result = await loginCommunityAccount('Example', 'fixture-password', async () => {
+       if (failure === 'network-failure') throw new Error('private network diagnostic')
++      if (failure === 'response-disconnect') return new Response(new ReadableStream<Uint8Array>({
++        start(controller) { controller.error(new Error('private connection diagnostic')) },
++      }))
+       if (failure === 'http-failure') return new Response(null, { status: 401 })
+       if (failure === 'invalid-json') return new Response('{')
+       return Response.json({ success: true, user: { id: '2' } })
+     })
+-    expect(result).toEqual({ success: false })
++    expect(result).toEqual({ success: false, problem: { code } })
+     expect(await readFile(join(directory, 'desktop-config.json'), 'utf8')).toBe(before)
+   })
++
++  it.each([
++    [400, 'invalid-account'], [401, 'login-invalid-credentials'], [403, 'login-forbidden'],
++    [429, 'login-rate-limited'], [503, 'login-server-failed'],
++  ])('reports HTTP %s without disclosing server diagnostics or changing configuration', async (status, code) => {
++    saveCommunityAccount(account)
++    const before = await readFile(join(directory, 'desktop-config.json'), 'utf8')
++    const result = await loginCommunityAccount('Example', 'private-password', async () =>
++      Response.json({ error: 'private-server-diagnostic', token: 'private-server-token' }, { status }))
++    expect(result).toEqual({ success: false, problem: { code } })
++    expect(await readFile(join(directory, 'desktop-config.json'), 'utf8')).toBe(before)
++    expect(JSON.stringify(result)).not.toMatch(/private-/u)
++  })
++
++  it.each(['oversized', 'empty-id', 'invalid-token', 'no-user', 'missing-body'])('rejects %s responses before saving an account', async (failure) => {
++    saveCommunityAccount(account)
++    const before = await readFile(join(directory, 'desktop-config.json'), 'utf8')
++    const result = await loginCommunityAccount('Example', 'fixture-password', async () => {
++      if (failure === 'oversized') return new Response(' '.repeat(1024 * 1024 + 1))
++      if (failure === 'missing-body') return new Response(null)
++      if (failure === 'no-user') return Response.json({ success: true, token: 'fixture-token' })
++      return Response.json({ success: true, user: { id: failure === 'empty-id' ? '' : '2' },
++        token: failure === 'invalid-token' ? 'token;unsafe' : 'fixture-token' })
++    })
++    expect(result).toEqual({ success: false, problem: { code: 'login-invalid-response' } })
++    expect(await readFile(join(directory, 'desktop-config.json'), 'utf8')).toBe(before)
++  })
++
++  it('does not create account state after a failed first sign-in', async () => {
++    const result = await loginCommunityAccount('Example', 'fixture-password', async () => new Response(null, { status: 401 }))
++    expect(result).toEqual({ success: false, problem: { code: 'login-invalid-credentials' } })
++    expect(await readdir(directory)).toEqual([])
++  })
++
++  it('atomically stores valid login metadata and retains unrelated configuration fields', async () => {
++    const existing = { community: account, apiKey: 'fixture-provider-key', custom: { enabled: true }, communityAdaptation: { maxAttempts: 1 } }
++    await writeFile(join(directory, 'desktop-config.json'), JSON.stringify(existing))
++    const result = await loginCommunityAccount('Example', 'fixture-password', async () =>
++      Response.json({ success: true, user: { id: 2, username: 'New user', email: 'new@example.test' }, token: 'new-token' }))
++    expect(result).toEqual({ success: true, token: 'new-token' })
++    const saved: unknown = JSON.parse(await readFile(join(directory, 'desktop-config.json'), 'utf8'))
++    expect(saved).toMatchObject({ ...existing, community: { userId: '2', username: 'New user', email: 'new@example.test', token: 'new-token' } })
++    expect((await readdir(directory)).filter(name => name.endsWith('.tmp'))).toEqual([])
++  })
++
++  it.each(['malformed-json', 'non-object', 'read-failure', 'write-failure', 'replace-failure'])('preserves the previous file when login storage encounters %s', async (failure) => {
++    const config = join(directory, 'desktop-config.json')
++    const before = failure === 'malformed-json' ? '{broken' : failure === 'non-object' ? '[]' : JSON.stringify({ community: account, custom: 'keep-me' })
++    await writeFile(config, before)
++    if (failure === 'read-failure') vi.spyOn(fs, 'readFileSync').mockImplementationOnce(() => { throw new Error('private-read-diagnostic') })
++    if (failure === 'write-failure') vi.spyOn(fs, 'writeFileSync').mockImplementationOnce(() => { throw new Error('private-write-diagnostic') })
++    if (failure === 'replace-failure') vi.spyOn(fs, 'renameSync').mockImplementationOnce(() => { throw new Error('private-replace-diagnostic') })
++    const result = await loginCommunityAccount('Example', 'private-password', async () =>
++      Response.json({ success: true, user: { id: '2' }, token: 'private-new-token' }))
++    expect(result).toEqual({ success: false, problem: { code: 'login-storage-failed' } })
++    expect(JSON.stringify(result)).not.toMatch(/private-/u)
++    expect(await readFile(config, 'utf8')).toBe(before)
++    expect((await readdir(directory)).filter(name => name.endsWith('.tmp'))).toEqual([])
++  })
+ })
+
+diff --git a/apps/desktop/tests/community-section.client.spec.tsx b/apps/desktop/tests/community-section.client.spec.tsx
+index 3f06d66..0f558b5 100644
+--- a/apps/desktop/tests/community-section.client.spec.tsx
++++ b/apps/desktop/tests/community-section.client.spec.tsx
+@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
+ import { StrictMode } from 'react'
+ import type {
+   CommunityCatalog, CommunityCatalogQuery, CommunityChange, CommunityInstallIntent, CommunityState,
+-  CommunityTask, CommunityTaskId, DesktopCommunityApi,
++  CommunityTask, CommunityTaskId, DesktopCommunityApi, CommunityLoginFailureCode,
+ } from '../src/community-types.ts'
+ import { CommunitySection } from '../plugins/dsh-community/src/client/CommunitySection.tsx'
+ import { communityEn, communityZh } from '../plugins/dsh-community/src/client/community-locales.ts'
+@@ -38,7 +38,7 @@ function fixture(initial: Partial<CommunityState> = {}, pending: CommunityInstal
+     detail: vi.fn(async (id: string) => id === PLUGIN.id
+       ? { ...PLUGIN, readme: '# Notes\n\nKeep project notes close to your conversation.' }
+       : { id, name: 'Other plugin', description: '', readme: '' }),
+-    openWebsite: vi.fn(async (_path?: string) => {}),
++    openWebsite: vi.fn<DesktopCommunityApi['openWebsite']>(async (_path?: string, _target?: 'system-browser') => {}),
+     install: vi.fn(async (_intent: CommunityInstallIntent) => {
+       const created = task()
+       state = { ...state, tasks: [created] }
+@@ -47,7 +47,7 @@ function fixture(initial: Partial<CommunityState> = {}, pending: CommunityInstal
+     cancel: vi.fn(async (_id: CommunityTaskId) => {}),
+     setEnabled: vi.fn(async (_name: string, _enabled: boolean) => APPLIED),
+     remove: vi.fn(async (_name: string) => APPLIED),
+-    login: vi.fn(async (_email: string, _password: string) => {
++    login: vi.fn<DesktopCommunityApi['login']>(async (_email: string, _password: string) => {
+       state = { ...state, account: { username: 'alice', email: 'alice@example.test' } }
+       return { ok: true }
+     }),
+@@ -250,6 +250,128 @@ describe('desktop community panel', () => {
+     expect(Object.keys(f.api.install.mock.calls[0]![0]).sort()).toEqual(['id', 'name', 'version'])
+   })
+ 
++  it('retains confirmed installation through a failed sign-in and resumes once after a successful retry', async () => {
++    const f = fixture({ account: null })
++    f.api.login.mockResolvedValueOnce({ ok: false, problem: { code: 'login-network-failed' } })
++    show(f)
++    const detail = await openDetails()
++    fireEvent.click(within(detail).getByRole('button', { name: communityEn.installConfirm }))
++    const login = await screen.findByRole('dialog', { name: communityEn.signInTitle })
++    fireEvent.change(within(login).getByLabelText(communityEn.username), { target: { value: 'alice' } })
++    fireEvent.change(within(login).getByLabelText(communityEn.password), { target: { value: 'fixture-password' } })
++    fireEvent.click(within(login).getByRole('button', { name: communityEn.signInContinue }))
++    expect(await within(login).findByText(communityEn.loginNetworkFailed)).toBeTruthy()
++    expect(f.api.install).not.toHaveBeenCalled()
++    fireEvent.click(within(login).getByRole('button', { name: communityEn.signInContinue }))
++    await waitFor(() => { expect(f.api.install).toHaveBeenCalledExactlyOnceWith(INTENT) })
++    expect(screen.queryByRole('dialog', { name: communityEn.signInTitle })).toBeNull()
++  })
++
++  it.each(['en', 'zh-CN'])('retains login fields and confirmed installation when account links open in the browser (%s)', async (locale) => {
++    const copy = locale === 'en' ? communityEn : communityZh
++    const f = fixture({ account: null }, INTENT)
++    show(f, locale)
++    const detail = await screen.findByRole('dialog', { name: locale === 'en' ? 'Install Notes' : '安装 Notes' })
++    fireEvent.click(within(detail).getByRole('button', { name: copy.installConfirm }))
++    const login = await screen.findByRole('dialog', { name: copy.signInTitle })
++    fireEvent.change(within(login).getByLabelText(copy.username), { target: { value: 'alice' } })
++    fireEvent.change(within(login).getByLabelText(copy.password), { target: { value: 'fixture-password' } })
++    fireEvent.click(within(login).getByRole('button', { name: copy.registerCommunityAccount }))
++    expect(f.api.openWebsite).toHaveBeenLastCalledWith('/auth/register', 'system-browser')
++    fireEvent.click(within(login).getByRole('button', { name: copy.openCommunityWebsite }))
++    expect(f.api.openWebsite).toHaveBeenLastCalledWith('/', 'system-browser')
++    expect(f.api.openWebsite).toHaveBeenCalledTimes(2)
++    expect(within(login).getByText(copy.registrationReturnHint)).toBeTruthy()
++    expect(within(login).getByLabelText<HTMLInputElement>(copy.username).value).toBe('alice')
++    expect(within(login).getByLabelText<HTMLInputElement>(copy.password).value).toBe('fixture-password')
++    expect(f.api.login).not.toHaveBeenCalled()
++    expect(f.api.install).not.toHaveBeenCalled()
++    fireEvent.click(within(login).getByRole('button', { name: copy.signInContinue }))
++    await waitFor(() => { expect(f.api.login).toHaveBeenCalledExactlyOnceWith('alice', 'fixture-password') })
++    await waitFor(() => { expect(f.api.install).toHaveBeenCalledExactlyOnceWith(INTENT) })
++  })
++
++  it('shows browser-opening failure in the login dialog and retains its inputs and pending installation', async () => {
++    const f = fixture({ account: null }, INTENT)
++    f.api.openWebsite.mockRejectedValueOnce(new Error('private-browser-diagnostic'))
++    show(f)
++    const detail = await screen.findByRole('dialog', { name: 'Install Notes' })
++    fireEvent.click(within(detail).getByRole('button', { name: communityEn.installConfirm }))
++    const login = await screen.findByRole('dialog', { name: communityEn.signInTitle })
++    fireEvent.change(within(login).getByLabelText(communityEn.username), { target: { value: 'alice' } })
++    fireEvent.change(within(login).getByLabelText(communityEn.password), { target: { value: 'fixture-password' } })
++    fireEvent.click(within(login).getByRole('button', { name: communityEn.registerCommunityAccount }))
++    expect(await within(login).findByText(communityEn.loginWebsiteFailed)).toBeTruthy()
++    expect(screen.queryByText('private-browser-diagnostic')).toBeNull()
++    expect(f.api.login).not.toHaveBeenCalled()
++    expect(f.api.install).not.toHaveBeenCalled()
++    fireEvent.click(within(login).getByRole('button', { name: communityEn.signInContinue }))
++    await waitFor(() => { expect(f.api.login).toHaveBeenCalledExactlyOnceWith('alice', 'fixture-password') })
++    await waitFor(() => { expect(f.api.install).toHaveBeenCalledExactlyOnceWith(INTENT) })
++  })
++
++  it('renders credential-free sign-in failure messages in both product locales', async () => {
++    const failures = [
++      ['invalid-account', 'loginFields'], ['login-invalid-credentials', 'loginFailed'],
++      ['login-forbidden', 'loginForbidden'], ['login-rate-limited', 'loginRateLimited'],
++      ['login-network-failed', 'loginNetworkFailed'], ['login-storage-failed', 'loginStorageFailed'],
++      ['login-invalid-response', 'loginInvalidResponse'], ['login-server-failed', 'loginServerFailed'],
++    ] as const satisfies readonly (readonly [CommunityLoginFailureCode, keyof typeof communityEn])[]
++    const observed: Record<string, string[]> = {}
++    for (const [locale, copy] of [['en', communityEn], ['zh-CN', communityZh]] as const) {
++      const f = fixture({ account: null })
++      const view = show(f, locale)
++      fireEvent.click(screen.getByRole('button', { name: copy.signIn }))
++      const login = await screen.findByRole('dialog', { name: copy.signInTitle })
++      fireEvent.change(within(login).getByLabelText(copy.username), { target: { value: 'alice' } })
++      fireEvent.change(within(login).getByLabelText(copy.password), { target: { value: 'fixture-password' } })
++      const messages: string[] = [
++        within(login).getByRole('button', { name: copy.registerCommunityAccount }).textContent ?? '',
++        within(login).getByRole('button', { name: copy.openCommunityWebsite }).textContent ?? '',
++        within(login).getByText(copy.registrationReturnHint).textContent ?? '',
++      ]
++      observed[locale] = messages
++      for (const [code, key] of failures) {
++        f.api.login.mockResolvedValueOnce({ ok: false, problem: { code } })
++        fireEvent.click(within(login).getByRole('button', { name: copy.signIn }))
++        const message = await within(login).findByText(copy[key])
++        messages.push(message.textContent ?? '')
++        expect(f.api.install).not.toHaveBeenCalled()
++      }
++      view.unmount()
++    }
++    expect(observed).toMatchInlineSnapshot(`
++      {
++        "en": [
++          "Create a community account",
++          "Open Stream community",
++          "Open in your default browser. After registering, return to this app to sign in and continue any confirmed installation",
++          "Enter your email or username and password",
++          "Sign-in failed. Check your account details and try again",
++          "The community refused this sign-in request. Update the desktop app or try the community website",
++          "Too many sign-in attempts. Wait a while and try again",
++          "Could not connect to the community. Check your connection and try again",
++          "Sign-in could not be saved. Check local storage permissions or available space and try again",
++          "The community returned an invalid sign-in response. Try again later",
++          "The community sign-in service is unavailable. Try again later",
++        ],
++        "zh-CN": [
++          "注册社区账号",
++          "打开深流社区",
++          "在系统默认浏览器中打开。注册后请返回桌面登录，继续已确认的安装",
++          "请输入邮箱或用户名及密码",
++          "登录失败，请检查账号信息后重试",
++          "社区拒绝了本次登录请求，请更新桌面客户端或尝试社区网站",
++          "登录尝试过于频繁，请稍后重试",
++          "无法连接深流社区，请检查网络后重试",
++          "登录状态无法保存，请检查本地存储权限或剩余空间后重试",
++          "社区返回的登录信息异常，请稍后重试",
++          "社区登录服务暂不可用，请稍后重试",
++        ],
++      }
++    `)
++  })
++
+   it('keeps failed downloads visible and labels restart-required results without claiming activation', async () => {
+     const f = fixture({ tasks: [task({ phase: 'failed', problem: { code: 'download-failed', details: 'HTTP 503' } })] })
+     f.api.install.mockImplementation(async () => {
+
+diff --git a/apps/desktop/tests/market-bundle.client.spec.tsx b/apps/desktop/tests/market-bundle.client.spec.tsx
+index 56c29f3..6bc0a06 100644
+--- a/apps/desktop/tests/market-bundle.client.spec.tsx
++++ b/apps/desktop/tests/market-bundle.client.spec.tsx
+@@ -165,7 +165,7 @@ function desktopFixture(coldOpen: boolean) {
+     cancel: vi.fn(async () => {}),
+     setEnabled: vi.fn(async (): Promise<CommunityChange> => ({ application: 'applied', changed: false })),
+     remove: vi.fn(async (): Promise<CommunityChange> => ({ application: 'applied', changed: false })),
+-    login: vi.fn(async () => ({ ok: true })),
++    login: vi.fn<DesktopCommunityApi['login']>(async () => ({ ok: true })),
+     logout: vi.fn(async () => {}),
+     takePending: vi.fn(async () => null),
+     claimOpen: vi.fn(async () => pendingOpen),
+
+diff --git a/apps/desktop/README.md b/apps/desktop/README.md
+index 5f440e8..ac3e70e 100644
+--- a/apps/desktop/README.md
++++ b/apps/desktop/README.md
+@@ -30,10 +30,16 @@ The native market uses deepseek.stream's server search, categories, scenario tag
+ 
+ The panel shows a persistent community sign-in entry and the signed-in account. Signing in resumes an installation the user has already confirmed. Community website pages open in the shared sandboxed Hub window with the current community sign-in session. Community login authorizes downloads; the official DeepSeek API key authorizes model adaptation. A paid plugin that requires website unlocking reports that requirement without repeatedly requesting login. Credentials stay in the main process.
+ 
++Desktop sign-in sends the canonical community Origin with the HTTPS account request. The panel distinguishes rejected account details, refused requests, rate limits, connection failures, invalid replies, and local storage failures without exposing server diagnostics. Community account changes atomically replace valid JSON configuration while retaining its other fields; failed sign-in and malformed configuration leave the existing file intact.
++
++The sign-in dialog's **Create a community account** and **Open Stream community** actions open `https://deepseek.stream/auth/register` and the community homepage in the system's default browser, retaining entered fields and any confirmed installation. After registering, return to Desktop and sign in to continue; browser registration does not automatically sign in Desktop. External account links carry no community session or login fields.
++
+ Protocol links open confirmation in the same panel and never install before confirmation. The receiver accepts current website links, normalizes GitHub `owner/repository` selectors, and discards legacy account, permission, and target-profile fields. External HTTPS download origins appear in confirmation. An external website's protocol handoff confirms that Desktop was requested; the website does not receive installation progress from this receiver. Browser-side progress requires a paired website bridge.
+ 
+ Compatible native ZIP/npm tgz bundles go directly to validation. Incompatible candidates can use the official `deepseek-flash` model with a locally configured official API key. The model receives bounded package source and sanitized diagnostics, and may patch only the extracted candidate while preserving package identity. Model attempts, time, context, and output have configurable limits. Downloaded archives and credential-free adaptation transcripts are retained separately from adapted artifacts. Desktop requests `raw=1` from the community download endpoint; an archive marked by the server as rewritten for Harness 0.1.6 requires model adaptation instead of being accepted as a current native bundle.
+ 
++First-party installations bind the selected plugin and release to the current community catalog. Package identity must match the recorded artifact's `sourceVersion`, falling back to `packageVersion`; its SHA-256, byte length, archive format, and `packageName` when present must also match exactly. Signed ticket URLs remain unchanged, and login and paid-unlock requirements remain enforced. Missing, stale, or failed metadata requires refreshing the market and retrying; Desktop never guesses a version or uses AI to bypass these checks.
++
+ Only repository archives whose final download URL is canonical HTTPS `github.com/.../archive/...` or `codeload.github.com/.../(zip|tar.gz)/...` may omit tracked dependency and repository metadata directories such as `node_modules`, `.git`, and `.github` during extraction. Omitted entries still receive path, type, and duplicate validation and count toward entry and uncompressed-byte limits. npm archives and other origins retain strict extraction. Original archive bytes and their SHA-256 remain retained; retries using the same archive preserve its repository extraction rules.
+ 
+ Adaptation requires the actual plugin implementation. AI cannot recover missing functionality from an archive containing only generated Harness 0.1.6 placeholder functions; its author must republish the real source. A download whose manifest version differs from the selected published version is rejected before paid model adaptation; the publisher must provide a matching archive.
+
+diff --git a/apps/desktop/README.zh.md b/apps/desktop/README.zh.md
+index 5545ebf..2958a73 100644
+--- a/apps/desktop/README.zh.md
++++ b/apps/desktop/README.zh.md
+@@ -30,10 +30,16 @@ Desktop Host 的 Platform API 请求与更新策略请求用相同的 Platform 
+ 
+ 面板固定显示社区登录入口和已登录账号。登录会继续用户已经确认的安装。社区网页在共享的沙箱 Hub 窗口中打开，并沿用当前社区登录状态。社区登录授权下载，官方 DeepSeek API Key 授权模型适配。付费插件需要在网站解锁时会明确提示，不会反复要求登录。凭据留在主进程。
+ 
++桌面登录向 HTTPS 账号接口发送规范的社区 Origin。面板分别提示账号信息不符、请求被拒绝、频率限制、网络连接失败、响应异常及本地保存失败，不展示服务端诊断。社区账号修改以原子替换写入有效的 JSON 配置并保留其他字段；登录失败或原配置异常时保留现有文件。
++
++登录弹窗中的**注册社区账号**和**打开深流社区**分别在系统默认浏览器中打开 `https://deepseek.stream/auth/register` 和社区主页，并保留已输入字段和已确认的安装。注册后返回 Desktop 登录即可继续；浏览器注册不会自动登录 Desktop。外部账号链接不携带社区会话或登录字段。
++
+ 协议链接在同一面板打开确认，确认前不会安装。接收端支持当前网站链接，将 GitHub `owner/repository` 转为完整网址，并丢弃旧链接中的账号、权限和目标 profile 字段。外部 HTTPS 下载来源显示在确认界面。外部网页通过协议交接仅确认已请求 Desktop；网页不能通过此接收端获得安装进度。浏览器侧进度需要配套网站桥接。
+ 
+ 兼容的原生 ZIP/npm tgz bundle 直接进入验证。不兼容候选包可通过本地配置的官方 API Key 调用官方 `deepseek-flash` 模型。模型接收有界的插件源码和脱敏诊断，仅能修改解包后的候选插件，且必须保留包身份。模型尝试次数、时间、上下文和输出均有可配置限制。下载归档与不含凭据的适配记录独立于适配产物保留。Desktop 向社区下载接口请求 `raw=1`；服务端标记为针对 Harness 0.1.6 改写过的归档必须经过模型适配，不能直接视为当前原生 bundle。
+ 
++本站安装将所选插件及版本绑定到当前社区目录。包身份必须匹配归档记录的 `sourceVersion`，缺失时回退到 `packageVersion`；SHA-256、字节长度、归档格式及记录中存在的 `packageName` 也必须准确匹配。签名票据 URL 保持不变，登录和付费解锁要求继续生效。元数据缺失、过期或获取失败时需要刷新市场并重试；Desktop 不会猜测版本，也不会通过 AI 绕过这些校验。
++
+ 只有最终下载 URL 为规范 HTTPS `github.com/.../archive/...` 或 `codeload.github.com/.../(zip|tar.gz)/...` 的仓库归档，才允许在解包时忽略已跟踪的依赖及仓库元数据目录，例如 `node_modules`、`.git` 和 `.github`。被忽略的条目仍需经过路径、类型和重复项校验，并计入条目数量及解压字节上限。npm 归档和其他来源仍使用严格解包规则。原始归档字节及其 SHA-256 会保留；使用同一归档重试时保留其仓库解包规则。
+ 
+ 适配需要插件的真实实现。只包含自动生成的 Harness 0.1.6 占位函数的归档，无法通过 AI 恢复缺失功能；作者需要重新发布真实源码。下载包清单中的版本若与选定的发布版本不同，会在付费模型适配前被拒绝；发布者需要提供版本匹配的归档。
+
+diff --git a/apps/desktop/README.i18n.yaml b/apps/desktop/README.i18n.yaml
+index 1c94d80..fb1afa0 100644
+--- a/apps/desktop/README.i18n.yaml
++++ b/apps/desktop/README.i18n.yaml
+@@ -6,8 +6,8 @@
+   en: 0f0f6ea914eff51e
+   zh: 4934245b04e9f1c0
+ /deepseek-harness-desktop/community-plugin-market:
+-  en: 54b935ee957befe9
+-  zh: 007f0c90aae46dd0
++  en: 3c186c23a75212e6
++  zh: c47a4afa6dff5d10
+ /deepseek-harness-desktop/community-plugin-market/ai-adaptation-settings:
+   en: e67cce2322fd1ca7
+   zh: e62f2a358117a174
+
+diff --git a/apps/desktop/src/preload-app.ts b/apps/desktop/src/preload-app.ts
+index 67a3816..3bcc783 100644
+--- a/apps/desktop/src/preload-app.ts
++++ b/apps/desktop/src/preload-app.ts
+@@ -20,7 +20,7 @@ function createCommunityApi(): DesktopCommunityApi {
+     getState: () => ipcRenderer.invoke(DESKTOP_IPC.communityState),
+     catalog: (refresh, query) => ipcRenderer.invoke(DESKTOP_IPC.communityCatalog, refresh, query),
+     detail: id => ipcRenderer.invoke(DESKTOP_IPC.communityDetail, id),
+-    openWebsite: path => ipcRenderer.invoke(DESKTOP_IPC.communityWebsite, path),
++    openWebsite: (path, target) => ipcRenderer.invoke(DESKTOP_IPC.communityWebsite, path, target),
+     install: intent => ipcRenderer.invoke(DESKTOP_IPC.communityInstall, intent),
+     cancel: id => ipcRenderer.invoke(DESKTOP_IPC.communityCancel, id),
+     setEnabled: (name, enabled) => ipcRenderer.invoke(DESKTOP_IPC.communityEnable, name, enabled),
+
+diff --git a/apps/desktop/src/community-navigation.ts b/apps/desktop/src/community-navigation.ts
+index 490189c..67e3842 100644
+--- a/apps/desktop/src/community-navigation.ts
++++ b/apps/desktop/src/community-navigation.ts
+@@ -1,7 +1,28 @@
+-/** Main-owned market requests remain pending until a live client confirms panel selection. */
++/** Main-owned market requests survive renderer reloads; website requests use fixed community destinations. */
+ import { randomUUID } from 'node:crypto'
+ import type { CommunityNavigationId } from './community-types.ts'
+ 
++/**
++ * Resolve a website request from product IPC to a canonical community destination.
++ * @param path - Existing Hub route or one of the two supported external account routes.
++ * @param target - Undefined for the shared Hub window, or system-browser for account onboarding.
++ * @returns A validated route, HTTPS URL, and presentation target without account credentials.
++ */
++export function communityWebsiteDestination(path: unknown, target: unknown): {
++  readonly path: string
++  readonly url: string
++  readonly target: 'hub' | 'system-browser'
++} {
++  if (path !== undefined && (typeof path !== 'string' || path !== path.trim()
++    || !/^\/(?:plugins(?:\/[a-z0-9._-]+)?|auth\/(?:login|register)|profile|dashboard|guide)?$/u.test(path))) {
++    throw new Error('Invalid community destination')
++  }
++  if (target !== undefined && target !== 'system-browser') throw new Error('Invalid community website target')
++  const route = typeof path === 'string' ? path : '/'
++  if (target === 'system-browser' && route !== '/' && route !== '/auth/register') throw new Error('Invalid external community destination')
++  return { path: route, url: new URL(route, 'https://deepseek.stream').href, target: target ?? 'hub' }
++}
++
+ /** Preserve market navigation across renderer reloads and ignore acknowledgements of replaced requests. */
+ export class DesktopCommunityNavigation {
+   private pending: CommunityNavigationId | null = null
+
+diff --git a/apps/desktop/tests/community-navigation.spec.ts b/apps/desktop/tests/community-navigation.spec.ts
+index 32557a3..53a6f28 100644
+--- a/apps/desktop/tests/community-navigation.spec.ts
++++ b/apps/desktop/tests/community-navigation.spec.ts
+@@ -1,6 +1,6 @@
+ /** Renderer reloads must not consume menu requests before a live panel has selected them. */
+ import { describe, expect, it } from 'vitest'
+-import { DesktopCommunityNavigation } from '../src/community-navigation.ts'
++import { DesktopCommunityNavigation, communityWebsiteDestination } from '../src/community-navigation.ts'
+ 
+ describe('market navigation ownership', () => {
+   it('retains an unanswered claim for a replacement renderer', () => {
+@@ -32,3 +32,31 @@ describe('market navigation ownership', () => {
+     expect(navigation.claim()).toBe(request)
+   })
+ })
++
++describe('community website destinations', () => {
++  it.each([undefined, '/', '/plugins', '/plugins/dsh-purge', '/auth/login', '/auth/register', '/profile', '/dashboard', '/guide'])('retains the existing Hub route %j', (path) => {
++    expect(communityWebsiteDestination(path, undefined)).toEqual({
++      path: path ?? '/', url: `https://deepseek.stream${path ?? '/'}`, target: 'hub',
++    })
++  })
++
++  it.each(['/', '/auth/register'])('opens the fixed account route %s without passing credentials', (path) => {
++    expect(communityWebsiteDestination(path, 'system-browser')).toEqual({
++      path, url: `https://deepseek.stream${path}`, target: 'system-browser',
++    })
++  })
++
++  it.each([null, 1, '', '//example.test/', 'https://deepseek.stream/auth/register', '/auth/register?password=private',
++    '/auth/register#private', '/auth/register/', '/auth/register\n', '/plugins/../dashboard', '/plugins/a%2Fb'])('rejects noncanonical IPC routes: %j', (path) => {
++    expect(() => communityWebsiteDestination(path, undefined)).toThrow('Invalid community destination')
++    expect(() => communityWebsiteDestination(path, 'system-browser')).toThrow('Invalid community destination')
++  })
++
++  it.each(['browser', '', true, null, { external: true }])('rejects unsupported presentation targets: %j', (target) => {
++    expect(() => communityWebsiteDestination('/auth/register', target)).toThrow('Invalid community website target')
++  })
++
++  it.each(['/auth/login', '/plugins', '/plugins/dsh-purge', '/profile', '/dashboard', '/guide'])('keeps %s out of external account onboarding', (path) => {
++    expect(() => communityWebsiteDestination(path, 'system-browser')).toThrow('Invalid external community destination')
++  })
++})
+
+diff --git a/apps/desktop/src/community-install.ts b/apps/desktop/src/community-install.ts
+index 068a348..4edef0a 100644
+--- a/apps/desktop/src/community-install.ts
++++ b/apps/desktop/src/community-install.ts
+@@ -85,6 +85,13 @@ const DEFAULT_LIMITS: CommunityInstallLimits = {
+   maxRedirects: 5,
+ }
+ const COMMUNITY_ORIGIN = 'https://deepseek.stream'
++const MAX_METADATA_BYTES = 2 * 1024 * 1024
++interface MarketArtifact {
++  sha256: string
++  bytes: number
++  format: 'zip' | 'tgz'
++  packageName?: string
++}
+ // The native Loader evaluates !!js later; archive validation parses it as inert text.
+ const PATCH_SCHEMA = JSON_SCHEMA.extend(new Type('tag:yaml.org,2002:js', { kind: 'scalar', construct: (value: unknown) => value }))
+ 
+@@ -114,6 +121,128 @@ function sourceOf(intent: DshProtocolParams): URL {
+   return source
+ }
+ 
++/** First-party selection uses the catalogue label; archive identity uses its recorded source release. */
++async function resolveMetadata(
++  intent: DshProtocolParams, source: URL, options: CommunityInstallOptions, limits: CommunityInstallLimits,
++): Promise<{ intent: DshProtocolParams; artifact?: MarketArtifact }> {
++  const firstParty = [COMMUNITY_ORIGIN, 'https://www.deepseek.stream'].includes(source.origin)
++  const ticket = /^\/api\/plugins\/install-artifact\/[a-f0-9]{64}$/u.test(source.pathname)
++  const frozen = /^\/api\/plugins\/artifacts\/([^/]+)\/([^/]+)\/([a-f0-9]{64})\.tgz$/u.exec(source.pathname)
++  if (!firstParty || (source.pathname !== '/api/plugins/download' && !ticket && frozen === null)) return { intent }
++  const timeout = new AbortController()
++  const timer = setTimeout(() => { timeout.abort() }, limits.timeoutMs)
++  const signal = options.signal === undefined ? timeout.signal : AbortSignal.any([options.signal, timeout.signal])
++  try {
++    cancelled(options.signal)
++    const response = await (options.fetch ?? globalThis.fetch)(new URL(`/api/plugins/${encodeURIComponent(intent.id)}`, source.origin), {
++      headers: { Accept: 'application/json', 'User-Agent': 'DeepSeek-Harness-Community' },
++      redirect: 'error', credentials: 'omit', referrerPolicy: 'no-referrer', signal,
++    })
++    if (!response.ok || response.body === null) {
++      await assertDownloadResponse(response)
++      throw new CommunityInstallError('download-failed', 'Community release metadata is unavailable')
++    }
++    const contentType = response.headers.get('content-type')?.split(';', 1)[0]?.trim().toLowerCase()
++    const length = response.headers.get('content-length')
++    if (contentType !== 'application/json' || (length !== null && (!/^\d+$/u.test(length) || Number(length) > MAX_METADATA_BYTES))) {
++      await response.body.cancel()
++      throw new CommunityInstallError('download-failed', 'Community release metadata is missing or invalid')
++    }
++    const reader = response.body.getReader(), chunks: Uint8Array[] = []
++    let received = 0
++    try {
++      for (;;) {
++        cancelled(options.signal)
++        const item = await reader.read()
++        if (item.done) break
++        received += item.value.byteLength
++        if (received > MAX_METADATA_BYTES) throw new CommunityInstallError('download-failed', 'Community release metadata exceeds its size limit')
++        chunks.push(item.value)
++      }
++    } finally {
++      await reader.cancel().catch((_error: unknown) => { /* A settled metadata stream is already closed. */ })
++      reader.releaseLock()
++    }
++    let payload: unknown
++    try { payload = JSON.parse(Buffer.concat(chunks).toString('utf8')) } catch (_error) {
++      throw new CommunityInstallError('download-failed', 'Community release metadata is not valid JSON')
++    }
++    const plugin = record(payload) && record(payload.plugin) ? payload.plugin : undefined
++    const verification = plugin !== undefined && record(plugin.installVerification) ? plugin.installVerification : undefined
++    const artifact = verification !== undefined && record(verification.artifact) ? verification.artifact : undefined
++    if (plugin === undefined || plugin.id !== intent.id || plugin.status !== 'published' || typeof plugin.version !== 'string'
++      || (plugin.version !== 'latest' && valid(plugin.version) !== plugin.version) || artifact === undefined
++      || artifact.packageVersion !== plugin.version || typeof artifact.sha256 !== 'string' || !/^[a-f0-9]{64}$/u.test(artifact.sha256)
++      || typeof artifact.bytes !== 'number' || !Number.isSafeInteger(artifact.bytes) || artifact.bytes <= 0
++      || (artifact.format !== 'zip' && artifact.format !== 'tgz')) {
++      throw new CommunityInstallError('download-failed', 'Community release requires a complete immutable archive record')
++    }
++    if (artifact.bytes > limits.maxDownloadBytes) throw new CommunityInstallError('too-large', 'Community archive exceeds the download limit')
++    const version = artifact.sourceVersion ?? artifact.packageVersion
++    if (typeof version !== 'string' || valid(version) !== version) {
++      throw new CommunityInstallError('download-failed', 'Community release requires a recorded exact package version')
++    }
++    const packageName = artifact.packageName
++    if (packageName !== undefined && packageName !== null && (typeof packageName !== 'string' || packageName.length > 214
++      || !/^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/u.test(packageName))) {
++      throw new CommunityInstallError('download-failed', 'Community release has an invalid recorded package name')
++    }
++    if (intent.downloadUrl === undefined) {
++      if (intent.version !== plugin.version) throw new CommunityInstallError('download-failed', 'The selected catalogue release has changed; refresh the market', 409)
++    } else if (ticket) {
++      if (source.search || source.hash || intent.version !== version) {
++        throw new CommunityInstallError('invalid-intent', 'The installation ticket selection does not match the recorded package version')
++      }
++    } else {
++      const selectedId = frozen === null ? source.searchParams.get('id') : decodeURIComponent(frozen[1]!)
++      const selectedVersion = frozen === null ? source.searchParams.get('version') : decodeURIComponent(frozen[2]!)
++      const selectedHash = frozen === null ? source.searchParams.get('sha256') : frozen[3]
++      if (selectedId !== plugin.id || selectedVersion !== plugin.version || (selectedHash !== null && selectedHash !== artifact.sha256)
++        || (frozen !== null && (source.search || source.hash || artifact.format !== 'tgz'))
++        || (intent.version !== version && intent.version !== plugin.version)) {
++        throw new CommunityInstallError('invalid-intent', 'The download selection does not match the current immutable release')
++      }
++    }
++    if (source.pathname === '/api/plugins/download') source.searchParams.set('sha256', artifact.sha256)
++    return { intent: { ...intent, version }, artifact: { sha256: artifact.sha256, bytes: artifact.bytes, format: artifact.format,
++      ...(typeof packageName === 'string' ? { packageName } : {}) } }
++  } catch (error) {
++    if (options.signal?.aborted) throw new CommunityInstallError('cancelled', 'Community installation was cancelled')
++    if (timeout.signal.aborted) throw new CommunityInstallError('timeout', 'Community release metadata timed out; retry the installation')
++    if (error instanceof CommunityInstallError) throw error
++    throw new CommunityInstallError('download-failed', 'Community release metadata could not be verified; refresh the market')
++  } finally { clearTimeout(timer) }
++}
++
++async function assertDownloadResponse(response: Response): Promise<void> {
++  if (response.ok && response.body !== null) return
++  let problem: CommunityInstallProblem = response.status === 401 ? 'authentication-required' : response.status === 403 ? 'download-forbidden' : 'download-failed'
++  if (response.status === 403 && response.body !== null) {
++    const reader = response.body.getReader()
++    try {
++      const chunks: Uint8Array[] = []
++      let bytes = 0
++      for (;;) {
++        const item = await reader.read()
++        if (item.done) break
++        bytes += item.value.byteLength
++        if (bytes > 8_192) break
++        chunks.push(item.value)
++      }
++      if (bytes <= 8_192) {
++        try {
++          const body: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8'))
++          if (record(body) && body.needUnlock === true) problem = 'plugin-unlock-required'
++        } catch (_error) { /* A non-JSON denial retains the HTTP permission category. */ }
++      }
++    } finally {
++      await reader.cancel().catch((_error: unknown) => { /* A completed or aborted denial body is already closed. */ })
++      reader.releaseLock()
++    }
++  } else await response.body?.cancel()
++  throw new CommunityInstallError(problem, `Community download returned HTTP ${response.status}`, response.status)
++}
++
+ async function download(
+   source: URL, destination: string, options: CommunityInstallOptions, limits: CommunityInstallLimits,
+ ): Promise<{ legacyAdapted: boolean; repositoryArchive: boolean }> {
+@@ -143,33 +272,8 @@ async function download(
+         url = next
+         continue
+       }
+-      if (!response.ok || response.body === null) {
+-        let problem: CommunityInstallProblem = response.status === 401 ? 'authentication-required' : response.status === 403 ? 'download-forbidden' : 'download-failed'
+-        if (response.status === 403 && response.body !== null) {
+-          const reader = response.body.getReader()
+-          try {
+-            const chunks: Uint8Array[] = []
+-            let bytes = 0
+-            for (;;) {
+-              const item = await reader.read()
+-              if (item.done) break
+-              bytes += item.value.byteLength
+-              if (bytes > 8_192) break
+-              chunks.push(item.value)
+-            }
+-            if (bytes <= 8_192) {
+-              try {
+-                const body: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+-                if (record(body) && body.needUnlock === true) problem = 'plugin-unlock-required'
+-              } catch (_error) { /* A non-JSON denial retains the HTTP permission category. */ }
+-            }
+-          } finally {
+-            await reader.cancel().catch((_error: unknown) => { /* A completed or aborted denial body is already closed. */ })
+-            reader.releaseLock()
+-          }
+-        } else await response.body?.cancel()
+-        throw new CommunityInstallError(problem, `Community download returned HTTP ${response.status}`, response.status)
+-      }
++      await assertDownloadResponse(response)
++      if (response.body === null) throw new CommunityInstallError('download-failed', 'Community archive response is empty')
+       const declared = response.headers.get('content-length')
+       const totalBytes = declared === null ? undefined : Number(declared)
+       if (totalBytes !== undefined && (!Number.isSafeInteger(totalBytes) || totalBytes < 0 || totalBytes > limits.maxDownloadBytes)) {
+@@ -386,7 +490,7 @@ function packageFile(root: string, value: string): string {
+ }
+ 
+ async function packageIdentity(
+-  directory: string, intent: DshProtocolParams,
++  directory: string, intent: DshProtocolParams, expectedName?: string,
+ ): Promise<{ root: string; name: string; version: string; manifest: Record<string, unknown> }> {
+   const children = await readdir(directory, { withFileTypes: true })
+   const root = children.some(child => child.name === 'package.json' && child.isFile()) ? directory
+@@ -398,11 +502,12 @@ async function packageIdentity(
+   }
+   if (!record(manifest) || typeof manifest.name !== 'string' || manifest.name.length > 214 || !/^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/u.test(manifest.name) || typeof manifest.version !== 'string' || valid(manifest.version) !== manifest.version) throw new CommunityInstallError('incompatible-package', 'Community package requires a valid npm name and semantic version')
+   if (intent.version !== 'latest' && manifest.version !== intent.version) throw new CommunityInstallError('incompatible-package', 'Downloaded package version does not match the selected version')
++  if (expectedName !== undefined && manifest.name !== expectedName) throw new CommunityInstallError('incompatible-package', 'Downloaded package name does not match the recorded release')
+   return { root, name: manifest.name, version: manifest.version, manifest }
+ }
+ 
+-async function validatePackage(directory: string, intent: DshProtocolParams): Promise<{ root: string; name: string; version: string }> {
+-  const { root, manifest } = await packageIdentity(directory, intent)
++async function validatePackage(directory: string, intent: DshProtocolParams, expectedName?: string): Promise<{ root: string; name: string; version: string }> {
++  const { root, manifest } = await packageIdentity(directory, intent, expectedName)
+   if (!record(manifest.dsh) || !record(manifest.dsh.bundle)) throw new CommunityInstallError('incompatible-package', 'Community package requires a native dsh.bundle declaration or official-model adaptation')
+   const declared = manifest.dsh.bundle.patch
+   const patches = typeof declared === 'string' ? [declared] : declared
+@@ -495,7 +600,7 @@ async function publishArtifact(
+ 
+ /**
+  * Prepare a validated npm tarball, optionally adapting an isolated candidate without changing profiles or executing package code.
+- * @param intent - validated selection from the protocol or community catalogue; manifest metadata remains authoritative.
++ * @param intent - selection from the protocol or catalogue; first-party archive identity and bytes must match its current immutable release record.
+  * @param options - local artifact storage, account credentials, cancellation, and resource limits.
+  * @returns manifest identity and a content-addressed local tgz spec; callers retain it while their profile references it.
+  * @throws {CommunityInstallError} for refused downloads, incompatible packages, timeouts, or cancellation.
+@@ -507,6 +612,9 @@ export async function prepareCommunityBundle(
+   const limits = limitsOf(options.limits)
+   const source = sourceOf(intent)
+   cancelled(options.signal)
++  const selection = await resolveMetadata(intent, source, options, limits)
++  const validationIntent = selection.intent
++  const expectedName = selection.artifact?.packageName
+   const temporary = await mkdtemp(join(tmpdir(), 'dsh-community-'))
+   try {
+     await chmod(temporary, 0o700)
+@@ -524,18 +632,26 @@ export async function prepareCommunityBundle(
+       if (createHash('sha256').update(await readFile(archive)).digest('hex') !== options.originalArchive.sha256) throw new CommunityInstallError('invalid-archive', 'Saved original community artifact failed its checksum')
+       repositoryArchive = options.originalArchive.repositoryArchive === true
+     }
++    const archiveBytes = await readFile(archive)
++    const originalSha256 = createHash('sha256').update(archiveBytes).digest('hex')
++    if (selection.artifact !== undefined) {
++      const format = archiveBytes[0] === 0x50 && archiveBytes[1] === 0x4b ? 'zip'
++        : archiveBytes[0] === 0x1f && archiveBytes[1] === 0x8b ? 'tgz' : undefined
++      if (originalSha256 !== selection.artifact.sha256 || archiveBytes.length !== selection.artifact.bytes || format !== selection.artifact.format) {
++        throw new CommunityInstallError('invalid-archive', 'Downloaded archive does not match its recorded checksum, length or format')
++      }
++    }
+     options.onProgress?.({ phase: 'validating' })
+     const extracted = join(temporary, 'extracted')
+     await mkdir(extracted, { mode: 0o700 })
+     await unpack(archive, extracted, limits, options.signal, repositoryArchive)
+-    const identity = await packageIdentity(extracted, intent)
+-    const originalSha256 = createHash('sha256').update(await readFile(archive)).digest('hex')
++    const identity = await packageIdentity(extracted, validationIntent, expectedName)
+     let originalSpec: string | undefined
+     let adaptationTranscript: string | undefined
+     let adapted = false
+     let manifest: Awaited<ReturnType<typeof validatePackage>>
+     try {
+-      manifest = await validatePackage(extracted, intent)
++      manifest = await validatePackage(extracted, validationIntent, expectedName)
+       if (options.adaptation?.force) throw new CommunityInstallError('incompatible-package', options.adaptation.diagnostic ?? 'The native plugin failed its isolated Harness trial')
+       if (sourceAdaptedFor016) throw new CommunityInstallError('incompatible-package', 'The community server marked this archive as rewritten for Harness 0.1.6; adapt its actual source for the current Harness version and reject generated placeholder functionality')
+     } catch (error) {
+@@ -546,7 +662,7 @@ export async function prepareCommunityBundle(
+         const result = await adaptCommunityCandidate({
+           root: identity.root, artifactDirectory: options.artifactDirectory, packageName: identity.name, version: identity.version,
+           diagnostic: error.message, ...(options.signal === undefined ? {} : { signal: options.signal }),
+-          validate: async () => { await validatePackage(extracted, intent); await validateAdaptedBundle(extracted, intent) },
++          validate: async () => { await validatePackage(extracted, validationIntent, expectedName); await validateAdaptedBundle(extracted, validationIntent) },
+         }, { ...options.adaptation,
+           redactValues: [...(options.adaptation.redactValues ?? []), ...(options.token === undefined ? [] : [options.token])] })
+         adaptationTranscript = result.transcriptPath
+@@ -558,7 +674,7 @@ export async function prepareCommunityBundle(
+         throw adaptationError
+       }
+       options.onProgress?.({ phase: 'validating' })
+-      manifest = await validatePackage(extracted, intent)
++      manifest = await validatePackage(extracted, validationIntent, expectedName)
+     }
+     cancelled(options.signal)
+     options.onProgress?.({ phase: 'packaging' })
+
+diff --git a/apps/desktop/tests/community-install.spec.ts b/apps/desktop/tests/community-install.spec.ts
+index 5f57c6f..499e087 100644
+--- a/apps/desktop/tests/community-install.spec.ts
++++ b/apps/desktop/tests/community-install.spec.ts
+@@ -38,7 +38,26 @@ function zip(files: Record<string, string> = {}, metadata: object = manifest): U
+ function options(artifacts: string, bytes = zip()): CommunityInstallOptions {
+   return {
+     artifactDirectory: artifacts,
+-    fetch: async () => new Response(new Uint8Array(bytes), { headers: { 'content-length': String(bytes.length) } }),
++    fetch: withMetadata(async () => new Response(new Uint8Array(bytes), { headers: { 'content-length': String(bytes.length) } }), bytes),
++  }
++}
++
++function release(bytes: Uint8Array, overrides: Record<string, unknown> = {}): Response {
++  return Response.json({ plugin: { id: intent.id, version: intent.version, status: 'published',
++    installVerification: { artifact: { packageVersion: intent.version, sourceVersion: manifest.version,
++      packageName: manifest.name, sha256: createHash('sha256').update(bytes).digest('hex'), bytes: bytes.length,
++      format: bytes[0] === 0x1f && bytes[1] === 0x8b ? 'tgz' : 'zip' } }, ...overrides } })
++}
++
++function withMetadata(fetcher: typeof fetch, bytes = zip()): typeof fetch {
++  return async (input, init) => {
++    const url = new URL(input instanceof Request ? input.url : String(input))
++    if (url.pathname === '/api/plugins/addon' && ['https://deepseek.stream', 'https://www.deepseek.stream'].includes(url.origin)) {
++      const headers = new Headers(init?.headers)
++      expect(headers.has('authorization') || headers.has('cookie')).toBe(false)
++      return release(bytes)
++    }
++    return fetcher(input, init)
+   }
+ }
+ 
+@@ -225,7 +244,7 @@ describe('community bundle preparation', () => {
+       if (requests.length === 3) return new Response(null, { status: 302, headers: { location: 'https://deepseek.stream/download-final' } })
+       return new Response(new Uint8Array(bytes))
+     }
+-    await prepareCommunityBundle(intent, { artifactDirectory: artifacts, token: 'fixture-account-token', fetch: fetcher })
++    await prepareCommunityBundle(intent, { artifactDirectory: artifacts, token: 'fixture-account-token', fetch: withMetadata(fetcher, bytes) })
+     expect(requests.slice(0, 2).every(request => request.authorization === 'Bearer fixture-account-token')).toBe(true)
+     expect(requests.slice(2).every(request => request.authorization === null && request.cookie === null)).toBe(true)
+   })
+@@ -261,17 +280,17 @@ describe('community bundle preparation', () => {
+   it('bounds redirect loops', async () => {
+     const { artifacts } = await fixture()
+     let calls = 0
+-    await expect(prepareCommunityBundle(intent, { artifactDirectory: artifacts, limits: { maxRedirects: 2 }, fetch: async () => {
++    await expect(prepareCommunityBundle(intent, { artifactDirectory: artifacts, limits: { maxRedirects: 2 }, fetch: withMetadata(async () => {
+       calls++
+       return new Response(null, { status: 302, headers: { location: '/again' } })
+-    } })).rejects.toMatchObject({ problem: 'download-failed' })
++    }) })).rejects.toMatchObject({ problem: 'download-failed' })
+     expect(calls).toBe(3)
+   })
+ 
+   it.each(['declared', 'streamed'])('enforces the %s download byte limit', async (kind) => {
+     const { artifacts } = await fixture()
+     const bytes = zip()
+-    await expect(prepareCommunityBundle(intent, {
++    await expect(prepareCommunityBundle({ ...intent, downloadUrl: 'https://example.com/limited.zip' }, {
+       artifactDirectory: artifacts, limits: { maxDownloadBytes: 8 },
+       fetch: async () => new Response(new Uint8Array(bytes), kind === 'declared' ? { headers: { 'content-length': String(bytes.length) } } : {}),
+     })).rejects.toMatchObject({ problem: 'too-large' })
+@@ -286,7 +305,7 @@ describe('community bundle preparation', () => {
+       cancel() { streamClosed = true },
+     })
+     await expect(prepareCommunityBundle(intent, {
+-      artifactDirectory: artifacts, signal: controller.signal, fetch: async () => new Response(stream),
++      artifactDirectory: artifacts, signal: controller.signal, fetch: withMetadata(async () => new Response(stream)),
+       onProgress: (progress) => { if ((progress.receivedBytes ?? 0) > 0) controller.abort() },
+     })).rejects.toMatchObject({ problem: 'cancelled' })
+     expect(streamClosed).toBe(true)
+@@ -327,7 +346,7 @@ describe('community bundle preparation', () => {
+ 
+   it('rejects a mismatched selected version', async () => {
+     const { artifacts } = await fixture()
+-    await expect(prepareCommunityBundle({ ...intent, version: '9.0.0' }, options(artifacts)))
++    await expect(prepareCommunityBundle({ ...intent, version: '9.0.0', downloadUrl: 'https://example.com/versioned.zip' }, options(artifacts)))
+       .rejects.toMatchObject({ problem: 'incompatible-package' })
+   })
+ 
+@@ -358,3 +377,195 @@ describe('community bundle preparation', () => {
+     await expect(readdir(artifacts)).rejects.toMatchObject({ code: 'ENOENT' })
+   })
+ })
++
++describe('first-party immutable release selection', () => {
++  const legacyIntent = { id: 'dsh-voice-wake-1-1-0', name: 'Voice wake', version: '1.0.1', repo: '' }
++  const packageManifest = { ...manifest, name: 'dsh-voice-wake', version: '1.27.0' }
++  const packageZip = (): Uint8Array => zip({ 'package/cordis.patch.yml': '- insert:\n    - id: voice-wake\n      name: dsh-voice-wake\n' }, packageManifest)
++  function metadata(bytes: Uint8Array, artifactChanges: Record<string, unknown> = {}, pluginChanges: Record<string, unknown> = {}): Response {
++    return Response.json({ plugin: { ...legacyIntent, status: 'published', installVerification: { artifact: {
++      packageVersion: legacyIntent.version, sourceVersion: packageManifest.version, packageName: packageManifest.name,
++      sha256: createHash('sha256').update(bytes).digest('hex'), bytes: bytes.length, format: 'zip', ...artifactChanges,
++    } }, ...pluginChanges } })
++  }
++
++  it('keeps the old catalogue selector while validating the recorded voice-wake 1.27.0 archive without a model call', async () => {
++    const { artifacts } = await fixture(), bytes = packageZip()
++    const requests: string[] = []
++    let modelCalls = 0
++    const result = await prepareCommunityBundle(legacyIntent, { artifactDirectory: artifacts, token: 'fixture-account-token',
++      adaptation: { apiKey: 'fixture-official-key', harnessVersion: '0.2.1-alpha.1', fetch: async () => { modelCalls++; throw new Error('Native release must not call a model') } },
++      fetch: async (input, init) => {
++        const url = new URL(String(input)), headers = new Headers(init?.headers)
++        requests.push(url.pathname)
++        if (url.pathname === `/api/plugins/${legacyIntent.id}`) {
++          expect(headers.has('authorization') || headers.has('cookie')).toBe(false)
++          expect(init?.redirect).toBe('error')
++          return metadata(bytes)
++        }
++        expect(url.searchParams.get('id')).toBe(legacyIntent.id)
++        expect(url.searchParams.get('version')).toBe('1.0.1')
++        expect(url.searchParams.get('sha256')).toBe(createHash('sha256').update(bytes).digest('hex'))
++        expect(headers.get('cookie')).toBe('deepseek_hub_auth_token=fixture-account-token')
++        return new Response(new Uint8Array(bytes))
++      } })
++    expect(result).toMatchObject({ packageName: 'dsh-voice-wake', version: '1.27.0', adapted: false })
++    expect(modelCalls).toBe(0)
++    expect(requests).toEqual([`/api/plugins/${legacyIntent.id}`, '/api/plugins/download'])
++  })
++
++  it('refuses a changed catalogue release before downloading or adapting it', async () => {
++    const { artifacts } = await fixture(), bytes = packageZip()
++    let downloads = 0
++    await expect(prepareCommunityBundle(legacyIntent, { artifactDirectory: artifacts, fetch: async input => {
++      if (new URL(String(input)).pathname === `/api/plugins/${legacyIntent.id}`) {
++        return metadata(bytes, { packageVersion: '1.0.2' }, { version: '1.0.2' })
++      }
++      downloads++
++      return new Response(new Uint8Array(bytes))
++    } })).rejects.toMatchObject({ problem: 'download-failed', statusCode: 409 })
++    expect(downloads).toBe(0)
++    await expect(readdir(artifacts)).rejects.toMatchObject({ code: 'ENOENT' })
++  })
++
++  it.each([
++    { sha256: 'a'.repeat(64) },
++    { bytes: 1 },
++    { format: 'tgz' },
++  ])('refuses bytes inconsistent with immutable metadata without invoking a model: %j', async changes => {
++    const { artifacts } = await fixture(), bytes = packageZip()
++    let modelCalls = 0
++    await expect(prepareCommunityBundle(legacyIntent, { artifactDirectory: artifacts,
++      adaptation: { apiKey: 'fixture-official-key', harnessVersion: '0.2.1-alpha.1', fetch: async () => { modelCalls++; throw new Error('Checksum errors are not adaptable') } },
++      fetch: async input => new URL(String(input)).pathname === `/api/plugins/${legacyIntent.id}`
++        ? metadata(bytes, changes) : new Response(new Uint8Array(bytes)),
++    })).rejects.toMatchObject({ problem: 'invalid-archive' })
++    expect(modelCalls).toBe(0)
++    await expect(readdir(artifacts)).rejects.toMatchObject({ code: 'ENOENT' })
++  })
++
++  it.each([{ sourceVersion: '1.27.1' }, { packageName: 'other-plugin' }])('refuses a manifest that differs from the recorded release without AI renaming: %j', async changes => {
++    const { artifacts } = await fixture(), bytes = packageZip()
++    let modelCalls = 0
++    await expect(prepareCommunityBundle(legacyIntent, { artifactDirectory: artifacts,
++      adaptation: { apiKey: 'fixture-official-key', harnessVersion: '0.2.1-alpha.1', fetch: async () => { modelCalls++; throw new Error('Identity errors are not adaptable') } },
++      fetch: async input => new URL(String(input)).pathname === `/api/plugins/${legacyIntent.id}`
++        ? metadata(bytes, changes) : new Response(new Uint8Array(bytes)),
++    })).rejects.toMatchObject({ problem: 'incompatible-package' })
++    expect(modelCalls).toBe(0)
++    await expect(readdir(artifacts)).rejects.toMatchObject({ code: 'ENOENT' })
++  })
++
++  it.each([
++    { sha256: undefined }, { bytes: undefined }, { format: 'rar' }, { packageVersion: '9.0.0' },
++    { sourceVersion: 'latest' }, { packageName: '../other-plugin' },
++  ])('requires complete, exact first-party release metadata: %j', async changes => {
++    const { artifacts } = await fixture(), bytes = packageZip()
++    let downloads = 0
++    await expect(prepareCommunityBundle(legacyIntent, { artifactDirectory: artifacts, fetch: async input => {
++      if (new URL(String(input)).pathname === `/api/plugins/${legacyIntent.id}`) return metadata(bytes, changes)
++      downloads++
++      return new Response(new Uint8Array(bytes))
++    } })).rejects.toMatchObject({ problem: 'download-failed' })
++    expect(downloads).toBe(0)
++  })
++
++  it('refuses latest without a recorded exact source release', async () => {
++    const { artifacts } = await fixture(), bytes = packageZip()
++    await expect(prepareCommunityBundle({ ...legacyIntent, version: 'latest' }, { artifactDirectory: artifacts,
++      fetch: async () => metadata(bytes, { packageVersion: 'latest', sourceVersion: undefined }, { version: 'latest' }),
++    })).rejects.toMatchObject({ problem: 'download-failed', message: expect.stringContaining('exact package version') })
++  })
++
++  it.each([{ id: 'other-plugin' }, { status: 'unlisted' }])('refuses metadata for a different or unpublished listing: %j', async changes => {
++    const { artifacts } = await fixture(), bytes = packageZip()
++    await expect(prepareCommunityBundle(legacyIntent, { artifactDirectory: artifacts,
++      fetch: async () => metadata(bytes, {}, changes),
++    })).rejects.toMatchObject({ problem: 'download-failed' })
++  })
++
++  it('accepts a frozen TGZ selector with the recorded source identity and exact digest', async () => {
++    const { root, artifacts } = await fixture(), source = join(root, 'source')
++    await mkdir(join(source, 'lib'), { recursive: true })
++    await writeFile(join(source, 'package.json'), JSON.stringify(packageManifest))
++    await writeFile(join(source, 'lib/index.js'), 'export default function plugin() {}\n')
++    await writeFile(join(source, 'cordis.patch.yml'), '- insert: []\n')
++    const archive = join(root, 'source.tgz')
++    await createTar({ cwd: source, file: archive, gzip: true, prefix: 'package/' }, ['.'])
++    const bytes = new Uint8Array(await readFile(archive)), sha256 = createHash('sha256').update(bytes).digest('hex')
++    const downloadUrl = `https://www.deepseek.stream/api/plugins/artifacts/${legacyIntent.id}/${legacyIntent.version}/${sha256}.tgz`
++    const result = await prepareCommunityBundle({ ...legacyIntent, version: packageManifest.version, downloadUrl }, {
++      artifactDirectory: artifacts, fetch: async input => new URL(String(input)).pathname === `/api/plugins/${legacyIntent.id}`
++        ? metadata(bytes, { format: 'tgz' }) : new Response(new Uint8Array(bytes)),
++    })
++    expect(result).toMatchObject({ packageName: packageManifest.name, version: packageManifest.version, originalSha256: sha256 })
++  })
++
++  it('preserves a paid signed download URL on www without sending account credentials there', async () => {
++    const { artifacts } = await fixture(), bytes = packageZip()
++    const downloadUrl = `https://www.deepseek.stream/api/plugins/install-artifact/${'f'.repeat(64)}`
++    let downloads = 0
++    const result = await prepareCommunityBundle({ ...legacyIntent, version: packageManifest.version, downloadUrl }, {
++      artifactDirectory: artifacts, token: 'fixture-account-token', fetch: async (input, init) => {
++        const url = new URL(String(input))
++        expect(new Headers(init?.headers).has('authorization') || new Headers(init?.headers).has('cookie')).toBe(false)
++        if (url.pathname === `/api/plugins/${legacyIntent.id}`) return metadata(bytes, {}, { price: 50 })
++        expect(url.href).toBe(downloadUrl)
++        downloads++
++        return new Response(new Uint8Array(bytes))
++      },
++    })
++    expect(result.version).toBe(packageManifest.version)
++    expect(downloads).toBe(1)
++  })
++
++  it('refuses a signed-link version that differs from the recorded source version', async () => {
++    const { artifacts } = await fixture(), bytes = packageZip()
++    let downloads = 0
++    await expect(prepareCommunityBundle({ ...legacyIntent,
++      downloadUrl: `https://deepseek.stream/api/plugins/install-artifact/${'f'.repeat(64)}` }, {
++      artifactDirectory: artifacts, fetch: async input => {
++        if (new URL(String(input)).pathname === `/api/plugins/${legacyIntent.id}`) return metadata(bytes)
++        downloads++
++        return new Response(new Uint8Array(bytes))
++      },
++    })).rejects.toMatchObject({ problem: 'invalid-intent' })
++    expect(downloads).toBe(0)
++  })
++
++  it.each(['other-plugin', 'dsh-voice-wake-1-1-0'])('binds explicit download selectors to the current catalogue: %s', async selectedId => {
++    const { artifacts } = await fixture(), bytes = packageZip()
++    const version = selectedId === legacyIntent.id ? '1.0.2' : legacyIntent.version
++    await expect(prepareCommunityBundle({ ...legacyIntent, version: packageManifest.version,
++      downloadUrl: `https://deepseek.stream/api/plugins/download?id=${selectedId}&version=${version}` }, {
++      artifactDirectory: artifacts, fetch: async () => metadata(bytes),
++    })).rejects.toMatchObject({ problem: 'invalid-intent' })
++  })
++
++  it('times out metadata acquisition without allocating or publishing an archive', async () => {
++    const { artifacts } = await fixture()
++    let settled = false
++    const fetcher: typeof fetch = async (_input, init) => new Promise((_resolve, reject) => {
++      init?.signal?.addEventListener('abort', () => {
++        settled = true
++        reject(new DOMException('Aborted', 'AbortError'))
++      }, { once: true })
++    })
++    await expect(prepareCommunityBundle(legacyIntent, { artifactDirectory: artifacts, fetch: fetcher, limits: { timeoutMs: 5 } }))
++      .rejects.toMatchObject({ problem: 'timeout', message: expect.stringContaining('metadata timed out') })
++    expect(settled).toBe(true)
++    await expect(readdir(artifacts)).rejects.toMatchObject({ code: 'ENOENT' })
++  })
++
++  it.each([
++    { label: 'foreign redirect', response: () => new Response(null, { status: 302, headers: { location: 'https://foreign.example/metadata' } }) },
++    { label: 'invalid content type', response: () => new Response('not JSON', { headers: { 'content-type': 'text/plain' } }) },
++  ])('refuses $label metadata without exposing a signed URL', async supplied => {
++    const { artifacts } = await fixture()
++    const token = 'f'.repeat(64)
++    await expect(prepareCommunityBundle({ ...legacyIntent, version: packageManifest.version,
++      downloadUrl: `https://deepseek.stream/api/plugins/install-artifact/${token}` }, {
++      artifactDirectory: artifacts, fetch: async () => supplied.response(),
++    })).rejects.toMatchObject({ problem: 'download-failed', message: expect.not.stringContaining(token) })
++  })
++})
+
+diff --git a/apps/desktop/tests/community-adaptation.spec.ts b/apps/desktop/tests/community-adaptation.spec.ts
+index bd84d15..bd9a3b2 100644
+--- a/apps/desktop/tests/community-adaptation.spec.ts
++++ b/apps/desktop/tests/community-adaptation.spec.ts
+@@ -40,10 +40,25 @@ function validPatch(): { path: string; content: string }[] {
+   ]
+ }
+ 
++/** First-party fixtures bind the immutable original before the official model receives an extracted candidate. */
++function withMetadata(bytes: Uint8Array, fetcher: typeof fetch): typeof fetch {
++  return async (input, init) => {
++    const url = new URL(input instanceof Request ? input.url : String(input))
++    if (url.origin === 'https://deepseek.stream' && url.pathname === `/api/plugins/${intent.id}`) {
++      expect(new Headers(init?.headers).has('authorization') || new Headers(init?.headers).has('cookie')).toBe(false)
++      return Response.json({ plugin: { id: intent.id, version: intent.version, status: 'published', installVerification: {
++        artifact: { packageVersion: intent.version, sourceVersion: identity.version, packageName: identity.name,
++          sha256: createHash('sha256').update(bytes).digest('hex'), bytes: bytes.length, format: 'zip' },
++      } } })
++    }
++    return fetcher(input, init)
++  }
++}
++
+ function options(artifactDirectory: string, bytes: Uint8Array, adaptation: Partial<CommunityAdaptationOptions> = {}): CommunityInstallOptions {
+   return {
+     artifactDirectory,
+-    fetch: async () => new Response(new Uint8Array(bytes)),
++    fetch: withMetadata(bytes, async () => new Response(new Uint8Array(bytes))),
+     adaptation: { apiKey: 'fixture-official-key', harnessVersion: '0.2.1-alpha.1', limits: { maxAttempts: 1 }, fetch: async () => response(validPatch()), ...adaptation },
+   }
+ }
+@@ -145,12 +160,13 @@ describe('official community plugin adaptation', () => {
+ 
+   it('reuses checksum-verified immutable original bytes for a native package trial retry', async () => {
+     const { artifactDirectory } = await fixture()
+-    const first = await prepareCommunityBundle(intent, options(artifactDirectory, archive(nativeManifest, {
++    const bytes = archive(nativeManifest, {
+       'package/lib/index.js': 'export function apply(ctx) { ctx.on("fixture/event", () => "feature") }', 'package/cordis.patch.yml': patch,
+-    })))
+-    const next = options(artifactDirectory, archive(), { force: true, diagnostic: 'Trial registration failure' })
++    })
++    const first = await prepareCommunityBundle(intent, options(artifactDirectory, bytes))
++    const next = options(artifactDirectory, bytes, { force: true, diagnostic: 'Trial registration failure' })
+     next.originalArchive = { spec: first.originalSpec!, sha256: first.originalSha256! }
+-    next.fetch = async () => { throw new Error('Must not redownload') }
++    next.fetch = withMetadata(bytes, async () => { throw new Error('Must not redownload') })
+     const second = await prepareCommunityBundle(intent, next)
+     expect(second.adapted).toBe(true)
+     expect(second.originalSha256).toBe(first.originalSha256)
+@@ -220,12 +236,12 @@ describe('official community plugin adaptation', () => {
+         calls++
+         expect(String(init?.body)).toContain('rewritten for Harness 0.1.6')
+         return response(validPatch())
+-      } }), fetch: async input => {
++      } }), fetch: withMetadata(bytes, async input => {
+         const url = new URL(String(input))
+         expect(url.origin).toBe('https://deepseek.stream')
+         expect(url.searchParams.get('raw')).toBe('1')
+         return new Response(new Uint8Array(bytes), { headers: { 'X-Plugin-016-Adapted': 'true' } })
+-      },
++      }),
+     })
+     expect(result.adapted).toBe(true)
+     expect(result.sourceAdaptedFor016).toBe(true)
+@@ -301,7 +317,7 @@ export default function setupClient(ctx) {}
+     const bytes = archive(nativeManifest, { 'package/src/index.ts': fallback, 'package/lib/index.js': fallback,
+       'package/client.js': clientFallback, 'package/cordis.patch.yml': patch })
+     await expect(prepareCommunityBundle(intent, { ...options(artifactDirectory, bytes, { fetch: async () => { calls++; return response(validPatch()) } }),
+-      fetch: async () => new Response(new Uint8Array(bytes), { headers: { 'X-Plugin-016-Adapted': 'true' } }),
++      fetch: withMetadata(bytes, async () => new Response(new Uint8Array(bytes), { headers: { 'X-Plugin-016-Adapted': 'true' } })),
+     })).rejects.toMatchObject({ problem: 'adaptation-failed', message: expect.stringContaining('lacks original functional source') })
+     expect(calls).toBe(0)
+     expect(await readdir(join(artifactDirectory, 'originals'))).toHaveLength(1)

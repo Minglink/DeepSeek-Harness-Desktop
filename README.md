@@ -1,5 +1,15 @@
 # DeepSeek Harness Desktop
 
+## 当前社区版：0.2.1-alpha.1（2026-10-10 安装修订）
+
+[下载注册登录与插件安装修复包](https://github.com/Minglink/DeepSeek-Harness-Desktop/releases/tag/v0.2.1-alpha.1-community-install-fix)。这是 Windows x64 未签名预发布安装包，完整版本仍为 `0.2.1-alpha.1`，请通过修订文件名区分旧包。
+
+安装社区插件前仍需登录深流社区。桌面登录框提供“注册社区账号”和“打开深流社区”；注册后返回桌面登录，即可继续已确认的安装。本次修复桌面登录请求被网站拒绝以及插件展示版本和发行包版本不同导致的安装失败，保留付费授权及发行包校验。
+
+本次修改的源码、测试和双语文档见 [community-desktop-0.2.1-alpha.1](community-desktop-0.2.1-alpha.1)。完整可构建的 monorepo 源码附在对应 Release 的 `source.tar.gz`，文件校验见 `SHA256SUMS.txt`。仓库根目录以下内容保留既有 0.1.6 封装记录；构建当前社区版请使用新的完整源码归档。
+
+---
+
 DeepSeek Harness 的 Windows 桌面版 —— 用 Electron 外壳把官方 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的 Web UI 打包成一键安装的桌面应用，并深度集成液态玻璃（Liquid Glass）视觉系统、4K 动态壁纸、`dsh://` 系统级插件一键安装联动协议与 AI 智能插件自愈引擎。
 
 > **声明**：本项目基于官方仓库 [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)（`deepseek-harness-master`）封装，不修改官方核心代码。核心能力、插件架构与 Web UI 全部来自官方项目，本项目提供 Electron 桌面外壳、自包含运行时打包、液态玻璃主题套件及一键安装协议。

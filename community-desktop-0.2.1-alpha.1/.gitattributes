@@ -1,0 +1,3 @@
+apps/** -text
+source-changes.json -text
+changes.patch -text -whitespace

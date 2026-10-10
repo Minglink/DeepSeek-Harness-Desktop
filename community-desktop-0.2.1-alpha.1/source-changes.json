@@ -1,0 +1,108 @@
+{
+  "version": "0.2.1-alpha.1",
+  "revision": "community-install-login-fix-20261010",
+  "files": [
+    {
+      "path": "apps/desktop/src/api-vault.ts",
+      "originalSha256": "c76328b0f303a5db208cfe4b682d276f3f80a0ad1e4156f38642b7a3f5e46863",
+      "sha256": "05de607e4d5d2e138bd4cf8844db44ee5999985d07eeac801297dde54e8fd952",
+      "bytes": 23513
+    },
+    {
+      "path": "apps/desktop/src/community-types.ts",
+      "originalSha256": "716171daec95cb3ee853778f61e4a779dd6d487f15da089ffa8d21d63f319de9",
+      "sha256": "daca8d7aab3f70ef7cef728dad681894d5a02a86063be0df1e6855ab55d027d3",
+      "bytes": 6465
+    },
+    {
+      "path": "apps/desktop/src/main.ts",
+      "originalSha256": "02952e1f53b8d830b171b51da1f2fe952d388f091e47d9d7e6b2a688ba68d9cb",
+      "sha256": "16cd5b84e6eb57709b2acfa653dd428d702647bc3dba95ff48bbc3b014078db8",
+      "bytes": 74577
+    },
+    {
+      "path": "apps/desktop/src/community-locales.ts",
+      "originalSha256": "33b753d6266bf497e40746b50c25a5910e6c40e1c4d06a9ee0298346c0e5759d",
+      "sha256": "5b4f1e20718b0d4773225b7f28ee2fe76d51b27d1c6320d397d4862605497509",
+      "bytes": 16073
+    },
+    {
+      "path": "apps/desktop/plugins/dsh-community/src/client/CommunitySection.tsx",
+      "originalSha256": "3e0cc4efbf1e7e053a90b9e92683390e00925bb3253f895008ea1c402f96cda8",
+      "sha256": "f67a58e12e3f88428612f731e597571b6bbfb183b832eaebe7544f3d90d5b33c",
+      "bytes": 40910
+    },
+    {
+      "path": "apps/desktop/tests/community-account.spec.ts",
+      "originalSha256": "a070f6e5c5b4d018a1983955d00f8023492516f8698731bf473963e8020ee6f7",
+      "sha256": "99072d72198d02886b3cc7d0ebba585ffe1894a9e78c4321540210dfa5d7087d",
+      "bytes": 8522
+    },
+    {
+      "path": "apps/desktop/tests/community-section.client.spec.tsx",
+      "originalSha256": "432eac63c46116cfc06f994db04770a1baf2683e7997835e4578e7f8265e840f",
+      "sha256": "6f69d33b5b3eaafb7fde663df97fd249c3c85edc196bae976c6fb34e2b816004",
+      "bytes": 37504
+    },
+    {
+      "path": "apps/desktop/tests/market-bundle.client.spec.tsx",
+      "originalSha256": "02e9886b3b462614c7ffa23703377ec301b7ec80ea4e6e5b4f4f72cd6b700fe8",
+      "sha256": "c61320a6107ddc703e5a2e4ff8d83da0254011822f9a0d75a5593d4826cb4724",
+      "bytes": 16589
+    },
+    {
+      "path": "apps/desktop/README.md",
+      "originalSha256": "24fc1311c83a49f5090a7bd250818a3911f2b6cac327337ac34faf6159b3a04d",
+      "sha256": "748e2de8370f1e10dd77c0366978fe4d8caea567568859ca20df740ac94bf4bb",
+      "bytes": 127180
+    },
+    {
+      "path": "apps/desktop/README.zh.md",
+      "originalSha256": "f950f40e03ad8bfa50dd64cfd281dfc6bab08fa934fa4d67801a930d71b81692",
+      "sha256": "7b0314916dd7357710093fdd9fe84f81a55645284f6ae973296e95563aed069f",
+      "bytes": 112861
+    },
+    {
+      "path": "apps/desktop/README.i18n.yaml",
+      "originalSha256": "257813b1da35d4dd3ed6d81f32b668d0980201c1e58342afe0bc0231b246d1f9",
+      "sha256": "f3793462df036a1a614d456e7f5908ba7089f27b609e0ea17d25d2fe0772a32c",
+      "bytes": 3026
+    },
+    {
+      "path": "apps/desktop/src/preload-app.ts",
+      "originalSha256": "23663b80f65e8c5b791321bd66606d387375b9ae1fc7544ec3664f99fcbadde1",
+      "sha256": "ed2c6a46ce20e08536c10e84882c2547bf816f56b76466c3c4cd5d5ffcbfbd17",
+      "bytes": 6931
+    },
+    {
+      "path": "apps/desktop/src/community-navigation.ts",
+      "originalSha256": "44867434ece0b57e9094fe80247cdfae74afcfc69f6e02dc38bd729a81c9422a",
+      "sha256": "fa0b54ab55ce12460f69390df74e77cabbd95d007ab38dceb12f13a405f16a02",
+      "bytes": 2536
+    },
+    {
+      "path": "apps/desktop/tests/community-navigation.spec.ts",
+      "originalSha256": "8b4cc437fc4369eef5663937ada4543e687a266f78ea5e0d9703e97fb3567109",
+      "sha256": "4f304b176a167e844961a2be3265afdcc9752617b413b7aa0ff20c20ce859417",
+      "bytes": 3302
+    },
+    {
+      "path": "apps/desktop/src/community-install.ts",
+      "originalSha256": "3a6531080bc6de39af1298ccbf27ad23eb557e61dddb20cb1bcac97737aa237e",
+      "sha256": "4e631ebef736ea2b307565bd2acc888db7e1f21dd83ecdbac79206f2d7e073d6",
+      "bytes": 40756
+    },
+    {
+      "path": "apps/desktop/tests/community-install.spec.ts",
+      "originalSha256": "0f999b3f3387ed8787f9846a5d691f925b22abbec92d398e28e757ec21a80bf2",
+      "sha256": "fb006954e76b4b617afd803396dfe857d17b06823155be900cb0b070de0ac8c7",
+      "bytes": 34308
+    },
+    {
+      "path": "apps/desktop/tests/community-adaptation.spec.ts",
+      "originalSha256": "eb4bb4c4c4328b27f5bf407655d229f5d4bc6680863959e9a6fcb9eb61b4f842",
+      "sha256": "61c2cedc225dfd66a34d65a06e0adf607f1edbbd03a8a7a22d3ea5be3afc4ae8",
+      "bytes": 21473
+    }
+  ]
+}
