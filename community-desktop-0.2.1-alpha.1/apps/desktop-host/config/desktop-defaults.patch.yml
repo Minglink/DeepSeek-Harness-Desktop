@@ -1,0 +1,120 @@
+# Electron 桌面部署的**部署层**：由 Desktop Host 通过 `runProfile({ defaultsFiles })`
+# 传进来，位置在组合包层之上、profile 自己的 `cordis.patch.yml` **之下**
+# （见 apps/cli/src/profile-boot.ts 的 insertDefaultsLayer）。
+#
+# 为什么不能放 overlay：overlay 是最上层，ConfigEditor 写完 profile 补丁后会重新
+# 组合整棵配置树，发现上层仍然压着同一个条目，就以
+# "Configuration for "…" is overridden by a home patch or command-line overlay"
+# 拒绝写入。结果是「开启无限制」这类设置永远存不下来（桌面宿主日志里那条 warn 就是它）。
+#
+# 这一层放的是**设置面要能写的一切**：偏好值，以及带设置字段的结构性行（insert 行）。
+# 判据只有一条——条目的 config 要从设置界面改，就必须由 profile 补丁之下的层声明：
+# `applyEntryPatches` 先跑 bundle 层、再跑本层、最后才跑 profile 补丁，overlay 排在
+# 最后；overlay 里 insert 的行在 profile 补丁被应用时还不存在，那条 patch 找不到目标
+# 就被丢掉，重新组合后仍判为「上层压着」，写入照样被拒。不需要设置的纯结构开关
+# （disabled 之类）仍旧留在 desktop.cordis.patch.yml。
+#
+# 注意：patch 会替换目标行的**整个 config**，所以每个条目都要完整重述自己的字段。
+
+# 桌面部署运行在操作者自己的机器上：写操作不受工作区限制。
+# patch 会替换目标行的**整个 config**，所以 workspaceRoot 要与 base 保持一致地重述一遍。
+- id: sandbox-policy
+  config:
+    mode: danger-full-access
+    workspaceRoot: !!js process.cwd()
+
+# 无审核：autoApprove 让**每一次 ask 在任何会话策略、任何权限档、任何应答器之前**
+# 就拿到 allowed-once（见 user-approval 的 decide()：autoApprove 先于 policy 判断），
+# 所以不存在"因审批被拦下/挂起/失败关闭"的路径。
+# policy 保持 never，与历史默认一致；会话里显式切到「无限制」档时 policy 写 ask，
+# 同样被 autoApprove 直接放行——两档都不会问人。
+- id: approval
+  config:
+    policy: never
+    autoApprove: true
+
+# 权限档位：上游三档 + 一档「无限制」。本部署把「无限制」设为默认档（新会话一开就是最高权限）；
+# 该档默认隐藏：聊天指令「开启无限制」把它显示出来、「关闭无限制」再收起来，
+# 真正启用它是在档位列表里选中它。受限档只是可选项。
+- id: permission
+  config:
+    presets:
+      read-only:
+        sandbox: read-only
+        approval: ask
+      workspace-write:
+        sandbox: workspace-write
+        approval: ask
+      # 次高档：沙箱全开 + approval: never（不询问、也不挂起）。
+      danger-full-access:
+        sandbox: danger-full-access
+        approval: never
+      # 「无限制」：真·零限制档。默认隐藏，由「开启无限制 / 关闭无限制」这两条聊天指令
+      # 控制它是否出现在档位列表里；选中它是用户自己的动作。通用设置与输入框默认都落在
+      # 「完全权限」上，所以这条档既不是默认值，也不会自己冒出来。
+      #   sandbox: danger-full-access —— 文件沙箱完全不生效，任意路径可写，不需要升权；
+      #   approval: ask —— 走 ctx.approval，而本部署 autoApprove: true，
+      #     ask 恒定返回 allowed-once，因此没有任何审批拦截，也没有动作被挂起等待确认。
+      unrestricted:
+        sandbox: danger-full-access
+        approval: ask
+        name: 无限制
+        description: 完全不设限制：文件沙箱不生效、任何操作都不会因审批被拦下
+        hidden: true
+    # 默认档是「完全权限」（danger-full-access）：沙箱全开 + 审批直通，不需要先手动选档；
+    # 「无限制」只作为聊天指令可开合的隐藏档存在，不再作为默认值出现在设置与输入框里。
+    defaultPreset: danger-full-access
+
+# 命令执行的默认与上限：上游 shell 执行器默认单次 120s、上限 600s（超过即被 kill）。
+# 桌面部署在这里抬掉这两处天花板：单次 10 分钟、上限 24 小时。
+#
+# 这两行同时**重述 base 行的平台护栏**。`applyEntryPatches` 是逐 key 合并的
+# （vendor/include/src/index.ts：`target[key] = value`），只写 `config` 并不会丢掉
+# base 的 `disabled`，所以重述不改变今天的挂载结果——它换掉的是这份契约的**隐含性**。
+# 两个执行器都在自己的构造函数里注册 `shell` 服务，谁后注册谁抛
+# `service "shell" has been registered at <SandboxPwshExecutor>`（宿主日志的
+# sandbox-bash-executor 那条），而平台事实原本只由 base 层单方面持有：一旦有人把本层
+# 改成整行替换，或照下面 compaction 那三行的样子改成 `insert` 一个新 id，护栏就会在这一层
+# 静默消失，且没有任何测试会红。重述之后，桌面部署的 win32/macOS/Linux 契约在本层自身
+# 可读，本层的每一条护栏都能被单独断言。
+- id: pwsh-sandbox
+  config:
+    timeoutMs: 600000
+    maxTimeoutMs: 86400000
+  disabled: !!js process.platform !== 'win32'
+
+- id: bash-sandbox
+  config:
+    timeoutMs: 600000
+    maxTimeoutMs: 86400000
+  disabled: !!js process.platform === 'win32'
+
+# 桌面端把 base 与 web-app 两个 bundle 组合在同一个进程里，而 web-app 会
+# `disabled: true` 掉压缩后端（在 Web 部署里那一行属于另一个运行时）。结果是
+# 桌面会话既不自动压缩、也没有 /compact，并且 composer 的记忆开关与"自动压缩
+# 触发百分比"滑块所依赖的设置命名空间不存在（客户端读到 unavailable 后整块不渲染）。
+#
+# 这里**不改上游那一行的 disabled 开关，而是另插一行新 id**。（把某一行从禁用翻成
+# 启用会让加载器把该条目重跑一次；换一个新 id 插一行，加载器一次挂载。）
+#
+# 这三行必须留在本层：`desktop-compaction` 的 `auto` / `thresholdRatio` 正是 composer
+# 记忆开关与百分比滑块要写的字段。行由 overlay 声明时，写入被 ConfigEditor 拒绝，
+# 客户端把这次失败当成「命名空间没了」，整块记忆座随之卸载（点一下灯泡就消失）。
+- insert:
+    - id: desktop-compaction
+      name: '@deepseek-ai/dsh-compaction-basic'
+      # DCP deliberately replaces this backend. This launch-time default stays
+      # below the user's own patch; selecting/removing DCP requires a Host restart.
+      disabled: !!js "ctx.get('profileContext')?.startedBundles.includes('@aiwayds/dsh-dcp') ?? false"
+
+    - id: desktop-command-compact
+      name: '@deepseek-ai/dsh-command-compact'
+
+    - id: desktop-tool-result-pruner
+      name: '@deepseek-ai/dsh-compaction-tool-result-pruner'
+      # An inserted row carries its own config: repeat the budget the base
+      # bundle declares for the row it replaces, or the pruner loses it.
+      config:
+        thresholdChars: 8192
+        headChars: 4096
+        tailChars: 1024

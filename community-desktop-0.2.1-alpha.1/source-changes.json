@@ -1,6 +1,6 @@
 {
   "version": "0.2.1-alpha.1",
-  "revision": "community-bundled-fix-20261010",
+  "revision": "community-market-fix-20261010",
   "files": [
     {
       "path": "apps/desktop/src/api-vault.ts",
@@ -53,23 +53,23 @@
     {
       "path": "apps/desktop/README.md",
       "originalSha256": "24fc1311c83a49f5090a7bd250818a3911f2b6cac327337ac34faf6159b3a04d",
-      "sha256": "bfe7887c60b228547264dd81298a08753c1941923f16c57c8447906593075bc2",
-      "bytes": 127180,
-      "previousCommunitySha256": "748e2de8370f1e10dd77c0366978fe4d8caea567568859ca20df740ac94bf4bb"
+      "sha256": "e68a3390a83f26b6a0d23103a360c8a1b121a81102dffed596e594035c4bd153",
+      "bytes": 128258,
+      "previousCommunitySha256": "bfe7887c60b228547264dd81298a08753c1941923f16c57c8447906593075bc2"
     },
     {
       "path": "apps/desktop/README.zh.md",
       "originalSha256": "f950f40e03ad8bfa50dd64cfd281dfc6bab08fa934fa4d67801a930d71b81692",
-      "sha256": "7cbf64b249c04bba90cbfae0409281dd66237f46490cacf0b5e4e3646dabb54b",
-      "bytes": 112861,
-      "previousCommunitySha256": "7b0314916dd7357710093fdd9fe84f81a55645284f6ae973296e95563aed069f"
+      "sha256": "669a8aa6e8dda65b31e3f01c01eddc7c9e3150997f708392318978a1c8d2367c",
+      "bytes": 113868,
+      "previousCommunitySha256": "7cbf64b249c04bba90cbfae0409281dd66237f46490cacf0b5e4e3646dabb54b"
     },
     {
       "path": "apps/desktop/README.i18n.yaml",
       "originalSha256": "257813b1da35d4dd3ed6d81f32b668d0980201c1e58342afe0bc0231b246d1f9",
-      "sha256": "cf9eb7178bf737d8d072905ff9c887aaa7f464fc6722ec0c9032d591f8502580",
+      "sha256": "aca2539035760c1e90dc059853c9592abc5022f8a8503f4b4cda75a69030fa94",
       "bytes": 3026,
-      "previousCommunitySha256": "f3793462df036a1a614d456e7f5908ba7089f27b609e0ea17d25d2fe0772a32c"
+      "previousCommunitySha256": "cf9eb7178bf737d8d072905ff9c887aaa7f464fc6722ec0c9032d591f8502580"
     },
     {
       "path": "apps/desktop/src/preload-app.ts",
@@ -114,7 +114,107 @@
       "sha256": "ccf39658733a88c23c2c44927bafa3905a4c6d734d694aa4aee2dade1f36af7d",
       "previousCommunitySha256": null,
       "originalSha256": null
+    },
+    {
+      "path": "packages/settings/settings/src/index.ts",
+      "originalSha256": "462c902f2782a14e2bb002338cbdd56a5971daa7ffca7114ac053636f154b5e9",
+      "previousCommunitySha256": "462c902f2782a14e2bb002338cbdd56a5971daa7ffca7114ac053636f154b5e9",
+      "sha256": "8afaa848cb7ec17eeb3a3237f1c616a9c244925ce8339f70c7511fb7efb3f180",
+      "bytes": 21568
+    },
+    {
+      "path": "packages/settings/settings/tests/legacy-import.spec.ts",
+      "originalSha256": null,
+      "previousCommunitySha256": null,
+      "sha256": "8e02b28e7638775d817a71aef1893939dc54cda07809335a5824c66d8d722942",
+      "bytes": 6743
+    },
+    {
+      "path": "packages/settings/settings/tests/legacy-import-files.spec.ts",
+      "originalSha256": null,
+      "previousCommunitySha256": null,
+      "sha256": "c3660b43fb5365e73f73191234065390af02a70aa8a38b71407a10a7f2f2eeaf",
+      "bytes": 5006
+    },
+    {
+      "path": "packages/settings/settings/tests/configuration.spec.ts",
+      "originalSha256": "e598f9f5477954534ee2a77fcd88602a093e527fe01ffe3cbe65843c2fe6b8b6",
+      "previousCommunitySha256": "e598f9f5477954534ee2a77fcd88602a093e527fe01ffe3cbe65843c2fe6b8b6",
+      "sha256": "7799f0290ce0987f9713173e7202ab9d43d8c24c116c77e01742891424d3566b",
+      "bytes": 22233
+    },
+    {
+      "path": "packages/settings/settings/README.md",
+      "originalSha256": "8859387a23e3081b6653c2529153e7b48ddb9a28428bb5872321a6242230e3b8",
+      "previousCommunitySha256": "8859387a23e3081b6653c2529153e7b48ddb9a28428bb5872321a6242230e3b8",
+      "sha256": "395bc917f84e24f8df28d0c71f4fe0c904a92a3bd320fddd9c63497712719cae",
+      "bytes": 4479
+    },
+    {
+      "path": "packages/settings/settings/README.zh.md",
+      "originalSha256": "31af6f9922ccad9a0e788d237ab1ef841315ded1ae22764f4b29294ef30ba90c",
+      "previousCommunitySha256": "31af6f9922ccad9a0e788d237ab1ef841315ded1ae22764f4b29294ef30ba90c",
+      "sha256": "e3eac293e9cc97b04b398bc17a32544676ef9128e02f5bd4be65da780abc8b8f",
+      "bytes": 3962
+    },
+    {
+      "path": "packages/settings/settings/README.i18n.yaml",
+      "originalSha256": "45c226082a3062475949e1a4fcbbade93ce9671380871c8a8b3c4021bf9bfd41",
+      "previousCommunitySha256": "45c226082a3062475949e1a4fcbbade93ce9671380871c8a8b3c4021bf9bfd41",
+      "sha256": "38a72d97715be8053e89c0fd671a54f027297b9917e4adb5b4599eb7fb3bdbca",
+      "bytes": 1339
+    },
+    {
+      "path": "packages/client/connection/src/rpc-host.ts",
+      "originalSha256": "bf305c21998f65d605c22ca01646a7ce277ea4e298cc34abaf13832f789f01c3",
+      "previousCommunitySha256": "bf305c21998f65d605c22ca01646a7ce277ea4e298cc34abaf13832f789f01c3",
+      "sha256": "ee167b3b26bcf0b8ea65276730fe2fad9b18af1fa5a6b91eda2795f6f6d380c9",
+      "bytes": 12413
+    },
+    {
+      "path": "packages/client/connection/tests/rpc-owner.host.spec.ts",
+      "originalSha256": null,
+      "previousCommunitySha256": null,
+      "sha256": "11dfa827161089d660fb24c20e6570f8496da6fb1fce6e498229cd4b37d46733",
+      "bytes": 7090
+    },
+    {
+      "path": "packages/client/connection/README.md",
+      "originalSha256": "ec4577194dc4454b5fcfd8bd23ac2aa0953b6f5a703ec3e77a5b00de3d749fe6",
+      "previousCommunitySha256": "ec4577194dc4454b5fcfd8bd23ac2aa0953b6f5a703ec3e77a5b00de3d749fe6",
+      "sha256": "8ccfbd00c3f26ca816e4fda2665bec87a7eee0cd363722a8de13d00a1fd7ee24",
+      "bytes": 11941
+    },
+    {
+      "path": "packages/client/connection/README.zh.md",
+      "originalSha256": "46a54a80553843524d987b4e831b2cdd6ff64b017b091192b79577deaa75ccec",
+      "previousCommunitySha256": "46a54a80553843524d987b4e831b2cdd6ff64b017b091192b79577deaa75ccec",
+      "sha256": "0189efb6a7de17f240f96eef25f29f5f5b099645dbe9934b9d0bd8be6138230a",
+      "bytes": 10945
+    },
+    {
+      "path": "packages/client/connection/README.i18n.yaml",
+      "originalSha256": "4c18429342798a3d26b9b1499a66f42d6d9c23371d285e304871948ff8b03d30",
+      "previousCommunitySha256": "4c18429342798a3d26b9b1499a66f42d6d9c23371d285e304871948ff8b03d30",
+      "sha256": "8c2b86f2083793f2e69dd6eb5b5de4ec1a67fbf5a1c640ca3da9ca46ef4a8191",
+      "bytes": 1442
+    },
+    {
+      "path": "apps/desktop-host/config/desktop-defaults.patch.yml",
+      "originalSha256": "9dd7fbfa2537da7f35ee6905d052963e3f8c7c1ad96a1a76f083d9cd306744c7",
+      "previousCommunitySha256": "9dd7fbfa2537da7f35ee6905d052963e3f8c7c1ad96a1a76f083d9cd306744c7",
+      "sha256": "0ae74fbaa5a93c859a42b2ecd8cc3c9240f2fd2d93670e5319c05f5ad57443e2",
+      "bytes": 7174
+    },
+    {
+      "path": "apps/desktop-host/tests/compaction-defaults.spec.ts",
+      "originalSha256": null,
+      "previousCommunitySha256": null,
+      "sha256": "c5e809fc33f9fc57fbd852f170dc3bb6f04627d686b0f4ab3af67cc47be72423",
+      "bytes": 5364
     }
   ],
-  "previousCommunityCommit": "34a2df963ab7ec5f77ecd5a87c25b8ff17aa3e68"
+  "previousCommunityCommit": "9dd2c53730b0d36960cb12f8cb4596097323cddf",
+  "fullSourceArchiveSha256": "250164db3b37058aa6b4daacba3d8c3ee6b846056b37632500fad6af81414707",
+  "sourceSnapshotSha256": "588469a9be29104b029115360afd2013b54bf455feb9e77e652948f4f45addd2"
 }

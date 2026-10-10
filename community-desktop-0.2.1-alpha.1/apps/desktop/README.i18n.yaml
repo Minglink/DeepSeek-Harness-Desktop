@@ -3,8 +3,8 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write apps/desktop/README.md
 /deepseek-harness-desktop:
-  en: 0f0f6ea914eff51e
-  zh: 4934245b04e9f1c0
+  en: 00c4c70ed714a16d
+  zh: 2782ee24b786700d
 /deepseek-harness-desktop/community-plugin-market:
   en: 6f52b0a498ebcfb1
   zh: 085c200fed323a0e
