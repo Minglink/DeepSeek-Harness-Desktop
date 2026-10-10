@@ -20,6 +20,17 @@ const manifest = {
   dsh: { bundle: { patch: './cordis.patch.yml' } },
 }
 
+function bundledFiles(name = '@fixture/one', version = '1.0.0', dependencies: Record<string, string> = {}, prefix = 'package/node_modules'): Record<string, string> {
+  return {
+    [`${prefix}/${name}/package.json`]: JSON.stringify({ name, version, type: 'module', exports: { '.': './index.js' }, dependencies }),
+    [`${prefix}/${name}/index.js`]: 'throw new Error("Bundled fixture code must never execute")\n',
+  }
+}
+
+function bundledZip(files: Record<string, string> = {}, changes: Record<string, unknown> = {}): Uint8Array {
+  return zip({ ...bundledFiles(), ...files }, { ...manifest, dependencies: { '@fixture/one': '1.0.0' }, bundledDependencies: ['@fixture/one'], ...changes })
+}
+
 async function fixture(): Promise<{ root: string; artifacts: string }> {
   const root = await mkdtemp(join(tmpdir(), 'dsh-community-fixture-'))
   roots.push(root)
@@ -67,6 +78,133 @@ function tarEntry(path: string, type: 'File' | 'SymbolicLink' | 'Link', data = '
   new Header({ path, type, size: content.length, mode: 0o600, linkpath: type === 'File' ? '' : '../outside' }).encode(header)
   return new Uint8Array(gzipSync(Buffer.concat([header, content, Buffer.alloc((512 - content.length % 512) % 512), Buffer.alloc(1024)])))
 }
+
+describe('explicit bundled community dependencies', () => {
+  it('retains a scoped declared package in ZIP preparation without importing its code', async () => {
+    const { root, artifacts } = await fixture(), bytes = bundledZip()
+    const prepared = await prepareCommunityBundle(intent, options(artifacts, bytes))
+    const destination = join(root, 'prepared')
+    await mkdir(destination)
+    await extractTar({ file: prepared.spec, cwd: destination })
+    expect(await readFile(join(destination, 'package/node_modules/@fixture/one/index.js'), 'utf8')).toBe(bundledFiles()['package/node_modules/@fixture/one/index.js'])
+    if (prepared.originalSpec === undefined) throw new Error('Preparation must retain its immutable original archive')
+    expect(await readFile(prepared.originalSpec)).toEqual(Buffer.from(bytes))
+  })
+
+  it('retains the same declared closure when preparing a tarball', async () => {
+    const { artifacts } = await fixture()
+    const first = await prepareCommunityBundle(intent, options(artifacts, bundledZip()))
+    const prepared = await prepareCommunityBundle(intent, options(artifacts, new Uint8Array(await readFile(first.spec))))
+    const names: string[] = []
+    await listTar({ file: prepared.spec, onReadEntry: (entry) => { names.push(entry.path) } })
+    expect(names).toContain('package/node_modules/@fixture/one/package.json')
+    expect(prepared).toMatchObject({ packageName: manifest.name, version: manifest.version })
+  })
+
+  it('validates same-name packages at different physical depths using nearest dependency resolution', async () => {
+    const { artifacts } = await fixture()
+    const bytes = bundledZip({
+      ...bundledFiles('@fixture/one', '1.0.0', { shared: '^2.0.0' }),
+      ...bundledFiles('other', '1.0.0', { shared: '^1.0.0' }),
+      ...bundledFiles('shared', '1.0.0'),
+      ...bundledFiles('shared', '2.0.0', {}, 'package/node_modules/@fixture/one/node_modules'),
+    }, { dependencies: { '@fixture/one': '1.0.0', other: '1.0.0' }, bundledDependencies: ['@fixture/one', 'other'] })
+    await expect(prepareCommunityBundle(intent, options(artifacts, bytes))).resolves.toMatchObject({ packageName: manifest.name })
+  })
+
+  it('terminates a declared runtime dependency cycle', async () => {
+    const { artifacts } = await fixture(), bytes = bundledZip({
+      ...bundledFiles('@fixture/one', '1.0.0', { other: '1.0.0' }),
+      ...bundledFiles('other', '1.0.0', { '@fixture/one': '1.0.0' }),
+    })
+    await expect(prepareCommunityBundle(intent, options(artifacts, bytes))).resolves.toMatchObject({ packageName: manifest.name })
+  })
+
+  it('preserves unbundled external semantic-version declarations and the standard alias', async () => {
+    const { root, artifacts } = await fixture(), bytes = bundledZip(bundledFiles('@fixture/one', '1.0.0', { external: '^1.0.0 || ^2.0.0' }), { bundledDependencies: undefined, bundleDependencies: ['@fixture/one'] })
+    const prepared = await prepareCommunityBundle(intent, options(artifacts, bytes)), destination = join(root, 'prepared')
+    await mkdir(destination)
+    await extractTar({ file: prepared.spec, cwd: destination })
+    const child: unknown = JSON.parse(await readFile(join(destination, 'package/node_modules/@fixture/one/package.json'), 'utf8'))
+    expect(child).toMatchObject({ dependencies: { external: '^1.0.0 || ^2.0.0' } })
+  })
+
+  it.each([
+    { label: 'absent bundle declaration', files: {}, changes: { bundledDependencies: undefined } },
+    { label: 'boolean bundle declaration', files: {}, changes: { bundledDependencies: true } },
+    { label: 'duplicate bundle names', files: {}, changes: { bundledDependencies: ['@fixture/one', '@fixture/one'] } },
+    { label: 'disagreeing bundle aliases', files: {}, changes: { bundleDependencies: ['other'] } },
+    { label: 'root runtime package without bundle reachability', files: bundledFiles('other'), changes: { dependencies: { '@fixture/one': '1.0.0', other: '1.0.0' } } },
+    { label: 'undeclared package name', files: { 'package/node_modules/@fixture/one/package.json': JSON.stringify({ name: 'other', version: '1.0.0' }) }, changes: {} },
+    { label: 'version outside root pin', files: bundledFiles('@fixture/one', '2.0.0'), changes: {} },
+    { label: 'prototype name without own dependency declaration', files: bundledFiles('constructor'), changes: { bundledDependencies: ['constructor'] } },
+    { label: 'noncanonical nested module directory', files: bundledFiles('hidden', '1.0.0', {}, 'package/lib/node_modules'), changes: {} },
+    { label: 'file dependency transport', files: bundledFiles('@fixture/one', '1.0.0', { external: 'file:../../../outside' }), changes: {} },
+    { label: 'npm dependency alias', files: bundledFiles('@fixture/one', '1.0.0', { external: 'npm:other@1.0.0' }), changes: {} },
+    { label: 'escaping export target', files: { 'package/node_modules/@fixture/one/package.json': JSON.stringify({ name: '@fixture/one', version: '1.0.0', exports: { '.': '../outside.js' } }) }, changes: {} },
+    { label: 'escaping bin name', files: { 'package/node_modules/@fixture/one/package.json': JSON.stringify({ name: '@fixture/one', version: '1.0.0', bin: { '../outside': './index.js' } }) }, changes: {} },
+    { label: 'unverified postinstall hook', files: { 'package/node_modules/@fixture/one/package.json': JSON.stringify({ name: '@fixture/one', version: '1.0.0', scripts: { postinstall: 'node index.js' } }) }, changes: {} },
+    { label: 'implicit native build', files: { 'package/node_modules/@fixture/one/binding.gyp': '{}' }, changes: {} },
+    { label: 'duplicate outer package root', files: { 'other/package.json': '{}' }, changes: {} },
+  ])('refuses $label before model adaptation or publication', async ({ files, changes }) => {
+    const { artifacts } = await fixture(), bytes = bundledZip(files, changes)
+    let modelCalls = 0
+    await expect(prepareCommunityBundle(intent, { ...options(artifacts, bytes), adaptation: {
+      apiKey: 'fixture-key', harnessVersion: '0.2.1-alpha.1', fetch: async () => { modelCalls++; throw new Error('Dependency refusal must not call a model') },
+    } })).rejects.toMatchObject({ problem: 'incompatible-package' })
+    expect(modelCalls).toBe(0)
+    await expect(readdir(artifacts)).rejects.toMatchObject({ code: 'ENOENT' })
+  })
+
+  it.each(['.bin', '.pnpm', '.cache', '.npm', '.git'])('refuses bundled %s metadata', async (reserved) => {
+    const { artifacts } = await fixture(), bytes = bundledZip({ [`package/node_modules/${reserved}/file`]: 'forbidden' })
+    await expect(prepareCommunityBundle(intent, options(artifacts, bytes))).rejects.toMatchObject({ problem: 'incompatible-package' })
+  })
+
+  it('refuses a bundled package whose manifest is absent', async () => {
+    const { artifacts } = await fixture(), bytes = bundledZip({ 'package/node_modules/other/index.js': 'not executed' }, { dependencies: { '@fixture/one': '1.0.0', other: '1.0.0' }, bundledDependencies: ['@fixture/one', 'other'] })
+    await expect(prepareCommunityBundle(intent, options(artifacts, bytes))).rejects.toMatchObject({ problem: 'incompatible-package' })
+  })
+
+  it('refuses a nested version mismatch even when the same name at the root matches', async () => {
+    const { artifacts } = await fixture(), bytes = bundledZip({
+      ...bundledFiles('@fixture/one', '1.0.0', { shared: '^1.0.0' }),
+      ...bundledFiles('shared', '1.0.0'),
+      ...bundledFiles('shared', '2.0.0', {}, 'package/node_modules/@fixture/one/node_modules'),
+    })
+    await expect(prepareCommunityBundle(intent, options(artifacts, bytes))).rejects.toMatchObject({ problem: 'incompatible-package' })
+  })
+
+  it('rejects root bundled declaration changes across an otherwise valid isolated adaptation', async () => {
+    const { artifacts } = await fixture(), bytes = bundledZip()
+    await expect(prepareCommunityBundle(intent, { ...options(artifacts, bytes), adaptation: {
+      apiKey: 'fixture-key', harnessVersion: '0.2.1-alpha.1', force: true, limits: { maxAttempts: 1 },
+      fetch: async () => Response.json({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify({ files: [{ path: 'package.json', content: JSON.stringify({ ...manifest, dependencies: { '@fixture/one': '^1.0.0' }, bundledDependencies: ['@fixture/one'] }) }], summary: 'Keep existing fixture behavior' }) } }] }),
+    } })).rejects.toThrow('Bundled dependency contents or declarations changed')
+    await expect(readdir(join(artifacts, 'v1'))).rejects.toMatchObject({ code: 'ENOENT' })
+    expect(await readdir(join(artifacts, 'originals'))).toHaveLength(1)
+  })
+
+  it('does not publish a bundled package when cancellation arrives before packaging', async () => {
+    const { root, artifacts } = await fixture(), controller = new AbortController(), installed = join(root, 'installed')
+    await writeFile(installed, 'previous environment')
+    await expect(prepareCommunityBundle(intent, { ...options(artifacts, bundledZip()), signal: controller.signal,
+      onProgress: (progress) => { if (progress.phase === 'packaging') controller.abort() },
+    })).rejects.toMatchObject({ problem: 'cancelled' })
+    expect(await readFile(installed, 'utf8')).toBe('previous environment')
+    await expect(readdir(artifacts)).rejects.toMatchObject({ code: 'ENOENT' })
+  })
+
+  it('counts bundled files toward extraction limits', async () => {
+    const { artifacts } = await fixture(), bytes = bundledZip({ 'package/node_modules/@fixture/one/large': 'x'.repeat(2048) })
+    await expect(prepareCommunityBundle(intent, { ...options(artifacts, bytes), limits: { maxExtractedBytes: 1024 } })).rejects.toMatchObject({ problem: 'too-large' })
+  })
+
+  it.each(['SymbolicLink', 'Link'] as const)('refuses bundled tar %s entries', async (type) => {
+    const { artifacts } = await fixture()
+    await expect(prepareCommunityBundle(intent, options(artifacts, tarEntry('package/node_modules/@fixture/one/link', type)))).rejects.toMatchObject({ problem: 'invalid-archive' })
+  })
+})
 
 describe('community bundle preparation', () => {
   it('publishes an immutable npm tarball using manifest identity without touching installed files', async () => {
@@ -324,7 +462,7 @@ describe('community bundle preparation', () => {
     { label: 'traversal', files: { '../escape.js': 'bad' }, problem: 'invalid-archive' },
     { label: 'Windows path alias', files: { 'package/CON.js': 'bad' }, problem: 'invalid-archive' },
     { label: 'case-folded duplicate', files: { 'package/LIB/index.js': 'bad' }, problem: 'invalid-archive' },
-    { label: 'bundled node_modules', files: { 'package/node_modules/other/index.js': 'bad' }, problem: 'incompatible-package' },
+    { label: 'undeclared node_modules', files: { 'package/node_modules/other/index.js': 'bad' }, problem: 'incompatible-package' },
     { label: 'multiple package roots', files: { 'other/package.json': '{}' }, problem: 'incompatible-package' },
     { label: 'malformed patch', files: { 'package/cordis.patch.yml': '[invalid' }, problem: 'incompatible-package' },
   ])('refuses $label', async ({ files, problem }) => {

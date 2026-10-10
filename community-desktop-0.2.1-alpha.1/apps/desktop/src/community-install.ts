@@ -14,6 +14,7 @@ import { valid } from 'semver'
 import { create as createTar, extract as extractTar, Parser } from 'tar'
 import { parseCommunitySourceUrl, parseDshUrl, type DshProtocolParams } from './installer.ts'
 import { adaptCommunityCandidate, CommunityAdaptationError, type CommunityAdaptationOptions } from './community-adaptation.ts'
+import { BundledDependencyError, validateBundledDependencies } from './community-bundled.ts'
 
 /** Download, extraction, and redirect limits for one community package. */
 export interface CommunityInstallLimits {
@@ -344,8 +345,8 @@ function archiveGuard(
     if (normalized.length > 1_024 || parts.some(part => !part || part === '..' || part === '.' || part.length > 255 || /[\\:\u0000-\u001f<>"|?*]/u.test(part) || /[ .]$/u.test(part) || /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/iu.test(part))) {
       throw new CommunityInstallError('invalid-archive', 'Community archive contains an unsafe file path')
     }
-    if (!repositoryArchive && parts.some(part => part.toLowerCase() === 'node_modules' || part.toLowerCase() === '.git')) {
-      throw new CommunityInstallError('incompatible-package', 'Publish a package without node_modules or repository metadata')
+    if (!repositoryArchive && parts.some(part => part.toLowerCase() === '.git')) {
+      throw new CommunityInstallError('incompatible-package', 'Publish a package without repository metadata')
     }
     const key = normalized.toLowerCase()
     if (paths.has(key)) throw new CommunityInstallError('invalid-archive', 'Community archive contains duplicate file paths')
@@ -506,8 +507,22 @@ async function packageIdentity(
   return { root, name: manifest.name, version: manifest.version, manifest }
 }
 
-async function validatePackage(directory: string, intent: DshProtocolParams, expectedName?: string): Promise<{ root: string; name: string; version: string }> {
+async function bundledDigest(
+  root: string, manifest: Record<string, unknown>, limits: CommunityInstallLimits, signal: AbortSignal | undefined,
+): Promise<string> {
+  try { return await validateBundledDependencies(root, manifest, limits, signal) }
+  catch (error) {
+    if (error instanceof BundledDependencyError) throw new CommunityInstallError(error.problem, error.message)
+    throw error
+  }
+}
+
+async function validatePackage(
+  directory: string, intent: DshProtocolParams, expectedName: string | undefined,
+  limits: CommunityInstallLimits, signal: AbortSignal | undefined,
+): Promise<{ root: string; name: string; version: string; bundledDigest: string }> {
   const { root, manifest } = await packageIdentity(directory, intent, expectedName)
+  const dependenciesDigest = await bundledDigest(root, manifest, limits, signal)
   if (!record(manifest.dsh) || !record(manifest.dsh.bundle)) throw new CommunityInstallError('incompatible-package', 'Community package requires a native dsh.bundle declaration or official-model adaptation')
   const declared = manifest.dsh.bundle.patch
   const patches = typeof declared === 'string' ? [declared] : declared
@@ -542,7 +557,7 @@ async function validatePackage(directory: string, intent: DshProtocolParams, exp
       throw new CommunityInstallError('incompatible-package', `Package entry ${entry} is missing from the archive`)
     }
   }
-  return { root, name: String(manifest.name), version: String(manifest.version) }
+  return { root, name: String(manifest.name), version: String(manifest.version), bundledDigest: dependenciesDigest }
 }
 
 async function validateAdaptedBundle(directory: string, intent: DshProtocolParams): Promise<void> {
@@ -599,12 +614,14 @@ async function publishArtifact(
 }
 
 /**
- * Prepare a validated npm tarball, optionally adapting an isolated candidate without changing profiles or executing package code.
+ * Prepare a validated npm tarball, retaining declared runtime bundles unchanged across optional source adaptation.
  * @param intent - selection from the protocol or catalogue; first-party archive identity and bytes must match its current immutable release record.
  * @param options - local artifact storage, account credentials, cancellation, and resource limits.
  * @returns manifest identity and a content-addressed local tgz spec; callers retain it while their profile references it.
  * @throws {CommunityInstallError} for refused downloads, incompatible packages, timeouts, or cancellation.
  * Temporary files are removed before settlement.
+ * Preparation executes no package code or hooks and changes no profiles.
+ * Bundled dependency installation hooks are refused pending native approval coverage.
  */
 export async function prepareCommunityBundle(
   intent: DshProtocolParams, options: CommunityInstallOptions,
@@ -646,12 +663,19 @@ export async function prepareCommunityBundle(
     await mkdir(extracted, { mode: 0o700 })
     await unpack(archive, extracted, limits, options.signal, repositoryArchive)
     const identity = await packageIdentity(extracted, validationIntent, expectedName)
+    // Dependency contents and root bindings stay fixed across any optional source adaptation.
+    const originalBundledDigest = await bundledDigest(identity.root, identity.manifest, limits, options.signal)
+    const validateCandidate = async (): Promise<Awaited<ReturnType<typeof validatePackage>>> => {
+      const candidate = await validatePackage(extracted, validationIntent, expectedName, limits, options.signal)
+      if (candidate.bundledDigest !== originalBundledDigest) throw new CommunityInstallError('invalid-archive', 'Bundled dependency contents or declarations changed after validation')
+      return candidate
+    }
     let originalSpec: string | undefined
     let adaptationTranscript: string | undefined
     let adapted = false
     let manifest: Awaited<ReturnType<typeof validatePackage>>
     try {
-      manifest = await validatePackage(extracted, validationIntent, expectedName)
+      manifest = await validateCandidate()
       if (options.adaptation?.force) throw new CommunityInstallError('incompatible-package', options.adaptation.diagnostic ?? 'The native plugin failed its isolated Harness trial')
       if (sourceAdaptedFor016) throw new CommunityInstallError('incompatible-package', 'The community server marked this archive as rewritten for Harness 0.1.6; adapt its actual source for the current Harness version and reject generated placeholder functionality')
     } catch (error) {
@@ -662,7 +686,7 @@ export async function prepareCommunityBundle(
         const result = await adaptCommunityCandidate({
           root: identity.root, artifactDirectory: options.artifactDirectory, packageName: identity.name, version: identity.version,
           diagnostic: error.message, ...(options.signal === undefined ? {} : { signal: options.signal }),
-          validate: async () => { await validatePackage(extracted, validationIntent, expectedName); await validateAdaptedBundle(extracted, validationIntent) },
+          validate: async () => { await validateCandidate(); await validateAdaptedBundle(extracted, validationIntent) },
         }, { ...options.adaptation,
           redactValues: [...(options.adaptation.redactValues ?? []), ...(options.token === undefined ? [] : [options.token])] })
         adaptationTranscript = result.transcriptPath
@@ -674,11 +698,12 @@ export async function prepareCommunityBundle(
         throw adaptationError
       }
       options.onProgress?.({ phase: 'validating' })
-      manifest = await validatePackage(extracted, validationIntent, expectedName)
+      manifest = await validateCandidate()
     }
     cancelled(options.signal)
     options.onProgress?.({ phase: 'packaging' })
     const packaged = join(temporary, 'package.tgz')
+    await validateCandidate()
     await createTar({ file: packaged, cwd: manifest.root, gzip: true, portable: true, prefix: 'package/', noMtime: true }, ['.'])
     cancelled(options.signal)
     const digest = createHash('sha256').update(await readFile(packaged)).digest('hex')
