@@ -1,0 +1,120 @@
+{
+  "revision": "community-plugin-restart-fix-20261011",
+  "version": "0.2.1-alpha.1",
+  "sourceArchiveSha256": "3ca9c4348118e8530d12ebbe36c09066a900dbf61968f3df53c49e824bd8cbd8",
+  "sourceSnapshotSha256": "1a379219f488f9e316e684d576c90e9c5ac53d833d23ef353befb7bd050b7c01",
+  "fullSourceFiles": 15516,
+  "files": [
+    {
+      "path": "apps/desktop/README.i18n.yaml",
+      "bytes": 3026,
+      "sha256": "a833a20fa09c6302260d1d27250abdfe048a7b649237d4810871f16c701cff2b"
+    },
+    {
+      "path": "apps/desktop/README.md",
+      "bytes": 130333,
+      "sha256": "d39fb1b1d2385eb30743abb8c9a75f35f3d8de08bbd4c36581ab068249195b80"
+    },
+    {
+      "path": "apps/desktop/README.zh.md",
+      "bytes": 115628,
+      "sha256": "a824259675d4ff5080dc737199c66201cfea21563fd614003d723dd7bf9c6c2c"
+    },
+    {
+      "path": "apps/desktop/installer/strings.nsh",
+      "bytes": 6688,
+      "sha256": "e77a2cc25d53da91a7478b61574355e382a8f7729e4d60991ee50a4db77492ea"
+    },
+    {
+      "path": "apps/desktop/scripts/installer-directories.nsh",
+      "bytes": 7192,
+      "sha256": "e78baf07824af4abbc1e81fdb05ca259c65b182ce39328c58991b1e3630b9038"
+    },
+    {
+      "path": "apps/desktop/scripts/windows-directory-installer.d.mts",
+      "bytes": 1430,
+      "sha256": "4b25704542d1b5a3e4638fc82605be582622d7ede7d5436801eb7eed2b384674"
+    },
+    {
+      "path": "apps/desktop/scripts/windows-directory-installer.mjs",
+      "bytes": 6186,
+      "sha256": "e8b02588507b1ef883e050dd90be8f880d2fb6e3beafd7286dcc3f7858e2013c"
+    },
+    {
+      "path": "apps/desktop/src/community-bundle-spec.ts",
+      "bytes": 1120,
+      "sha256": "8d8027002819956e37230ee1a9210a000e7b91804f2dda9bc13180b94c7b14d0"
+    },
+    {
+      "path": "apps/desktop/src/community-failure.ts",
+      "bytes": 6812,
+      "sha256": "27f9f8cfe79a0d365e1343c3056860c7f93094312e7bbc4958b53ebd649b3f0b"
+    },
+    {
+      "path": "apps/desktop/src/community-profile-bundles.ts",
+      "bytes": 11079,
+      "sha256": "7831f0b39a8ad0dd3ad083112c66bdb956c37f75cc4a0370c48a2b895e0bafc5"
+    },
+    {
+      "path": "apps/desktop/src/community-trial-bundles.ts",
+      "bytes": 11497,
+      "sha256": "05cad9c8831e92675e59c3eda54cb8b617d2359a2689734f3c8062571d1f6e8a"
+    },
+    {
+      "path": "apps/desktop/src/community-trial-profile.ts",
+      "bytes": 10584,
+      "sha256": "d8e6a58b035d32ba81b44fd89ad8f7822e54d3fbdaa10560cfc6266d83e46aec"
+    },
+    {
+      "path": "apps/desktop/src/community-trial.ts",
+      "bytes": 5957,
+      "sha256": "7a488c3e4106b6eda9dc85538c4f10f3d62f46968f7173342180904c5b1781de"
+    },
+    {
+      "path": "apps/desktop/src/main.ts",
+      "bytes": 75097,
+      "sha256": "f56df3d591d704d776aa1fa2264e73317a3c0ae162f22eb30ad0f37f99287c11"
+    },
+    {
+      "path": "apps/desktop/src/project-manager.ts",
+      "bytes": 35557,
+      "sha256": "cf9702997bc00a92548f819844b8a940d56e6aef3c8ac534811a0a81cac4b8d7"
+    },
+    {
+      "path": "apps/desktop/tests/community-bundle-spec.spec.ts",
+      "bytes": 2989,
+      "sha256": "fe1bef0f0f6ff37ce88eb99249ef8f26ce82d0f1797ccc5fbf54cc5c2bb68871"
+    },
+    {
+      "path": "apps/desktop/tests/community-failure.spec.ts",
+      "bytes": 7939,
+      "sha256": "9baaa31e8dbb6591e50201b60e67b26622ab3c772e7074f13fcc07cbc98ed56d"
+    },
+    {
+      "path": "apps/desktop/tests/community-profile-bundles.spec.ts",
+      "bytes": 13059,
+      "sha256": "2f777f027f903a34d1d5a26531b6be812683b13d37d0d88549d113b44bf23ba1"
+    },
+    {
+      "path": "apps/desktop/tests/community-trial-bundles.spec.ts",
+      "bytes": 16901,
+      "sha256": "6ef4dfaf677e208d4b931a9e33ca2cb2058d468f19bbee521da1058dbb08fd64"
+    },
+    {
+      "path": "apps/desktop/tests/community-trial.spec.ts",
+      "bytes": 13829,
+      "sha256": "bf82d6cb2fa959fc6a52e5a9b3ca5cae0da2485bcee674ff9eb3396789cb106f"
+    },
+    {
+      "path": "apps/desktop/tests/project-manager-upgrade.spec.ts",
+      "bytes": 10265,
+      "sha256": "67c619438b8f7fda06be27e540298662fc6b031788963669c24762e2ad32c0d1"
+    },
+    {
+      "path": "apps/desktop/tests/windows-directory-installer.spec.ts",
+      "bytes": 5722,
+      "sha256": "b95455b756ce41fc14f500491ddad96f36c89aed9a3c4b859e51f22d1b771396"
+    }
+  ],
+  "retainedPreviousRevision": "community-plugin-install-fix-20261011"
+}

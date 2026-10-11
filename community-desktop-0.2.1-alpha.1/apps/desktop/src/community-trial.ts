@@ -6,6 +6,7 @@ import { CommunityTransactionError } from './community-transaction.ts'
 import type { PreparedCommunityBundle } from './community-install.ts'
 import { observeCommunityOperation } from './community-operation.ts'
 import { communityInfrastructureFailure, communityTrialCleanupFailure, nativeCommunityTrialFailure } from './community-failure.ts'
+import { nativeCommunityBundleSpec } from './community-bundle-spec.ts'
 export { observeCommunityOperation } from './community-operation.ts'
 
 /** One Host allocation; fatal events remain local to the candidate instead of invoking desktop recovery dialogs. */
@@ -20,6 +21,7 @@ export type CommunityTrialHostFactory = (failed: (error: Error) => void) => Pick
  */
 export async function trialCommunityBundle(createHost: CommunityTrialHostFactory, prepared: PreparedCommunityBundle,
   signal: AbortSignal): Promise<void> {
+  const spec = nativeCommunityBundleSpec(prepared)
   const failure = new AbortController()
   const observation = AbortSignal.any([signal, failure.signal, AbortSignal.timeout(120_000)])
   const start = async (host: ReturnType<CommunityTrialHostFactory>, baseline = false): Promise<{ url: string; cookie: string }> => {
@@ -45,7 +47,7 @@ export async function trialCommunityBundle(createHost: CommunityTrialHostFactory
   let trialFailure: unknown
   try {
     const backend = await start(host, true)
-    const value = await invoke(backend, 'installBundle', { spec: prepared.spec, options: { enabled: true } })
+    const value = await invoke(backend, 'installBundle', { spec, options: { enabled: true } })
     if (typeof value !== 'object' || value === null || !('application' in value)
       || !['applied', 'restart-required'].includes(String(value.application))
       || ('error' in value && value.error !== undefined)) {

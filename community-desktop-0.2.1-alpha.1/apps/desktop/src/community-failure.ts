@@ -48,7 +48,7 @@ export function nativeCommunityTrialFailure(value: unknown): CommunityTransactio
 export function communityFailureSummary(error: unknown): { code: string; cause: string; adaptationEligible: boolean; cleanup?: 'stop' } {
   const diagnostic = error instanceof CommunityTransactionError ? error.diagnostic ?? '' : ''
   const pnpm = pnpmCode(diagnostic)
-  const stage = ['baseline-start', 'authentication', 'transport', 'stop', 'timeout']
+  const stage = ['baseline-start', 'authentication', 'transport', 'stop', 'timeout', 'preparation', 'restoration']
     .find(stage => diagnostic.split('\n').includes(`Candidate Host infrastructure failed: ${stage}`))
   const cause = pnpm ?? stage ?? (error instanceof CommunityTransactionError && !error.adaptationEligible ? 'installation-infrastructure' : 'plugin-or-preparation')
   const code = error instanceof CommunityInstallError ? error.problem
@@ -73,6 +73,15 @@ export function communityTrialCleanupFailure(first: unknown): CommunityTransacti
  * @param stage - Fixed main-owned operation; no subprocess text is accepted.
  * @returns A trial failure that preserves recovery behavior and prevents source rewriting.
  */
-export function communityInfrastructureFailure(stage: 'baseline-start' | 'authentication' | 'transport' | 'stop' | 'timeout'): CommunityTransactionError {
+export function communityInfrastructureFailure(stage: 'baseline-start' | 'authentication' | 'transport' | 'stop' | 'timeout' | 'preparation' | 'restoration'): CommunityTransactionError {
   return new CommunityTransactionError('trial-failed', true, `Candidate Host infrastructure failed: ${stage}`, false)
+}
+
+/** Keep unconfirmed Host exit authoritative when restoring candidate configuration also fails. */
+export function communityTrialRestorationFailure(first: unknown): CommunityTransactionError {
+  const unconfirmed = first instanceof CommunityTransactionError && first.code === 'rollback-failed' && !first.restored
+  const earlier = first === undefined ? undefined : `Candidate earlier failure: ${communityFailureSummary(first).cause}`
+  return new CommunityTransactionError(unconfirmed ? 'rollback-failed' : 'trial-failed', !unconfirmed,
+    ['Candidate Host infrastructure failed: restoration', earlier,
+      unconfirmed ? 'Candidate Host cleanup failed: stop' : undefined].filter(Boolean).join('\n'), false)
 }

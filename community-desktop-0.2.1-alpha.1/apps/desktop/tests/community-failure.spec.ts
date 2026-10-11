@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest'
 import { CommunityTransactionError } from '../src/community-transaction.ts'
 import { CommunityInstallError } from '../src/community-install.ts'
-import { communityFailureSummary, communityInfrastructureFailure, communityTrialCleanupFailure, nativeCommunityTrialFailure } from '../src/community-failure.ts'
+import { communityFailureSummary, communityInfrastructureFailure, communityTrialCleanupFailure, communityTrialRestorationFailure, nativeCommunityTrialFailure } from '../src/community-failure.ts'
 
 const incompatible = [{ name: '@example/plugin', version: '1.2.3', runtimeVersion: '0.2.1-alpha.1', peers: { '@deepseek-ai/dsh-settings': '^0.1.0' } }]
 
@@ -71,9 +71,23 @@ describe('main-only community failure classification', () => {
     expect(nativeCommunityTrialFailure(value).adaptationEligible).toBe(false)
   })
 
-  it.each(['baseline-start', 'authentication', 'transport', 'stop', 'timeout'] as const)('keeps %s infrastructure context fixed and internal', (stage) => {
+  it.each(['baseline-start', 'authentication', 'transport', 'stop', 'timeout', 'preparation', 'restoration'] as const)('keeps %s infrastructure context fixed and internal', (stage) => {
     const error = communityInfrastructureFailure(stage)
     expect(communityFailureSummary(error)).toEqual({ code: 'trial-failed', cause: stage, adaptationEligible: false })
+  })
+
+  it('retains unconfirmed Host exit when candidate patch restoration also fails', () => {
+    const initial = communityTrialCleanupFailure(communityInfrastructureFailure('baseline-start'))
+    const failure = communityTrialRestorationFailure(initial)
+    expect(failure).toMatchObject({ code: 'rollback-failed', restored: false, adaptationEligible: false })
+    expect(communityFailureSummary(failure)).toEqual({ code: 'rollback-failed', cause: 'restoration', adaptationEligible: false, cleanup: 'stop' })
+  })
+
+  it('keeps restoration as infrastructure while retaining only a fixed earlier cause', () => {
+    const failure = communityTrialRestorationFailure(new CommunityTransactionError('trial-failed', true, 'C:/private-path secret-token'))
+    expect(failure).toMatchObject({ code: 'trial-failed', restored: true, adaptationEligible: false })
+    expect(failure.diagnostic).toContain('Candidate earlier failure: plugin-or-preparation')
+    expect(failure.diagnostic).not.toMatch(/private-path|secret-token/u)
   })
 
   it('never copies arbitrary errors, unknown transaction codes or adaptation messages into log summaries', () => {

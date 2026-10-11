@@ -89,3 +89,7 @@ DeepSeek Harness 的 Windows 桌面版 —— 用 Electron 外壳把官方 [Deep
 ## 社区插件安装修订（2026-10-11）
 
 应用版本为 `0.2.1-alpha.1`，发行修订为 `community-plugin-install-fix-20261011`。修复候选环境 pnpm 虚拟存储路径迁移，并保留安装环境首错，避免把安装设施错误送入 AI。完整源码和未签名 Windows x64 安装包见 [本次 Release](https://github.com/Minglink/DeepSeek-Harness-Desktop/releases/tag/v0.2.1-alpha.1-community-plugin-install-fix)。历史发行和源码保持可取；详细验证范围与限制见 Release 说明。
+
+## 社区插件安装与重启保留修订（2026-10-11）
+
+应用版本为 `0.2.1-alpha.1`，发行修订为 `community-plugin-restart-fix-20261011`。修复完整退出后再次启动清理用户主动安装插件的问题，保留用户插件依赖、加载顺序及已核验的私有插件替换；修复私有替换环境中的隔离安装试运行和同版本重复安装。Windows 安装器对暂时占用的目录增加有限重试，替换失败时保留原环境并提供具体错误信息。账户、会话、附件和既有插件配置经过逐文件核对，启动缓存和插件注册时间的正常变化单独验证。完整源码和未签名 Windows x64 安装包见 [本次 Release](https://github.com/Minglink/DeepSeek-Harness-Desktop/releases/tag/v0.2.1-alpha.1-community-plugin-restart-fix)。历史发行和源码保持可取；详细验证范围与限制见 Release 说明。

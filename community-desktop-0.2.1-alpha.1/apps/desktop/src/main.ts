@@ -64,6 +64,7 @@ import { assertCommunityBundleReady, trialCommunityBundle } from './community-tr
 import type { PreparedCommunityBundle } from './community-install.ts'
 import { communityCatalogQuery } from './community-catalog.ts'
 import { prepareCommunityTrialProfile } from './community-trial-profile.ts'
+import { communityInfrastructureFailure, communityTrialRestorationFailure } from './community-failure.ts'
 import { LOADING_IMAGE_DATA_URL } from './loading-image.ts'
 import { WORDMARK_IMAGE_DATA_URL } from './wordmark-image.ts'
 import { installDesktopShortcuts } from './keyboard.ts'
@@ -976,13 +977,23 @@ async function main(): Promise<void> {
   const communityTransaction = new CommunityProfileTransaction({
     profile: activeProject, directory: join(resolveDshHome(), 'desktop', 'community'),
     trial: async (profile, home, prepared, signal) => {
-      const restore = await prepareCommunityTrialProfile(profile, home)
+      let restore: () => Promise<void>
+      try { restore = await prepareCommunityTrialProfile(profile, home, activeProject) }
+      catch (error) {
+        if (error instanceof CommunityTransactionError && !error.adaptationEligible) throw error
+        throw communityInfrastructureFailure('preparation')
+      }
+      let first: unknown
       try {
         await trialCommunityBundle(failed => new DesktopHostProcess(
           resources.node, resources.dsh, profile, undefined,
           communityTrialEnvironment({ ...hostEnvironment, DSH_CLIENT_VERSION: desktopClientVersion() }, home),
           failed, primaryRuntime, resources), prepared, signal)
-      } finally { await restore() }
+      } catch (error) { first = error; throw error }
+      finally {
+        try { await restore() }
+        catch (_error) { throw communityTrialRestorationFailure(first) }
+      }
     },
     pause: async (recovering) => {
       communityHostOperation = true

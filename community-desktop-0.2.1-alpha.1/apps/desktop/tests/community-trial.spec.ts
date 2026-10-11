@@ -1,5 +1,7 @@
 /** Trial probes retain the real authenticated HTTP bridge over an OS-assigned fixture listener and owned Host lifecycle hooks. */
 import { createServer, type Server } from 'node:http'
+import { tmpdir } from 'node:os'
+import { resolve } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { assertCommunityBundleReady, observeCommunityOperation, trialCommunityBundle, type CommunityTrialHostFactory } from '../src/community-trial.ts'
 import { communityFailureSummary } from '../src/community-failure.ts'
@@ -11,7 +13,8 @@ afterEach(async () => {
     server.closeAllConnections()
   })))
 })
-const prepared = { spec: 'private-fixture.tgz', packageName: '@example/trial', version: '1.2.3', bundle: '@example/trial' }
+const prepared = { spec: resolve(tmpdir(), '社区 fixture', 'private-fixture.tgz'), packageName: '@example/trial',
+  version: '1.2.3', bundle: '@example/trial' }
 const rows = [{ rowId: 'fixture-entry', moduleName: '@example/trial', entryId: 'fixture-entry' }]
 const bundle = { name: prepared.packageName, version: prepared.version, enabled: true, installed: true, optional: false, removable: true, rows, overrides: [] }
 const entry = { entryId: 'fixture-entry', moduleName: '@example/trial', enabled: true, fiberPhase: 'active' }
@@ -42,7 +45,8 @@ async function fixture(values: {
     methods.push(payload.method)
     let value: unknown
     if (payload.method === 'pluginManager/installBundle') {
-      expect(payload.payload.args).toEqual({ spec: prepared.spec, options: { enabled: true } })
+      expect(payload.payload.args).toEqual({ spec: `${prepared.packageName}@file:${prepared.spec.replace(/\\/gu, '/')}`,
+        options: { enabled: true } })
       await values.onInstall?.()
       value = values.install ?? { application: 'applied', changed: true }
     } else if (payload.method === 'pluginManager/listBundles') value = values.inventory ?? [bundle]
@@ -79,6 +83,21 @@ describe('community candidate Host trial', () => {
     const data = await fixture({ install: { application: 'restart-required', changed: true } })
     await trialCommunityBundle(data.createHost, prepared, new AbortController().signal)
     expect(data.events).toEqual(['start-1', 'stop-1', 'start-2', 'stop-2'])
+  })
+
+  it('still invokes native installation and both Host probes for an unchanged same-version reinstall', async () => {
+    const data = await fixture({ install: { application: 'applied', changed: false } })
+    await trialCommunityBundle(data.createHost, prepared, new AbortController().signal)
+    expect(data.events).toEqual(['start-1', 'stop-1', 'start-2', 'stop-2'])
+    expect(data.methods).toEqual(['pluginManager/installBundle', 'pluginManager/listBundles', 'pluginManager/listPlugins'])
+  })
+
+  it('refuses an invalid prepared local artifact before allocating any candidate Host', async () => {
+    let allocations = 0
+    const createHost: CommunityTrialHostFactory = () => { allocations++; throw new Error('Host must not be allocated') }
+    await expect(trialCommunityBundle(createHost, { ...prepared, spec: 'relative.tgz' }, new AbortController().signal))
+      .rejects.toMatchObject({ code: 'trial-failed', adaptationEligible: false })
+    expect(allocations).toBe(0)
   })
 
   it.each([
