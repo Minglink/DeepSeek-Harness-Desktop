@@ -1,0 +1,70 @@
+{
+  "passed": true,
+  "version": "0.2.1-alpha.1",
+  "revision": "community-installer-process-fix10-20261012",
+  "installer": {
+    "name": "DSH-0.2.1-fix10-win-x64.exe",
+    "bytes": 496399594,
+    "sha256": "5835ae167c31bfc12a945bdec28c75a313e7c62ad90bd729d3f42a7ff7f29857"
+  },
+  "sourceArchive": {
+    "name": "DSH-0.2.1-fix10-source.tar.gz",
+    "bytes": 37519609,
+    "sha256": "e9098af06c1cf941a4c80c3ef77224ba06900193de6dcc28052ac1a3a6983c6e"
+  },
+  "sourceFileCount": 14687,
+  "changedSourceFiles": 6,
+  "otherSourceFilesByteIdentical": true,
+  "qualification": {
+    "sameFix10LifecycleOnly": true,
+    "localDefaultDefenderStaticPassed": true,
+    "oldFix9FalsePositiveProven": false,
+    "realFix8Fix9UpgradeQualified": false,
+    "fullCatalogBusinessQualified": false,
+    "signed": false
+  },
+  "originalReportPins": [
+    {
+      "purpose": "build",
+      "filename": "qualified-build-report-v2.json",
+      "sha256": "1ef16b1eadd28aebe58e394f3304d20ff70ca3748f1b1640b66f46bc41171f1a"
+    },
+    {
+      "purpose": "source-prepared",
+      "filename": "source-recovery-prepared-result-v1.json",
+      "sha256": "ad671b9db8ac75d6ca66efe611b54f8320f8853ab838f3b0250c268e91e04b33"
+    },
+    {
+      "purpose": "defender-static",
+      "filename": "fix10-complete-installer-defender-static-scan-v1-result.json",
+      "sha256": "5db25e2d8bd1990b1527fa4b9b3e335fa3f78792b0fe773fc9f95f0ccebdedfd"
+    },
+    {
+      "purpose": "native-lifecycle",
+      "filename": "windows-production-installer-isolated-result.json",
+      "sha256": "ade7c5dd985e36e0f63d4c8d0d0ef6cad1c0a4a52d05a66b58659c7c061cde13"
+    },
+    {
+      "purpose": "pe-independent",
+      "filename": "fix10-pe-and-packaged-runtime-independent-result-v1.json",
+      "sha256": "a7fc17717db2f7fe7d4e92e685e82ed06607e23279df7bf91a95b9771018bb33"
+    },
+    {
+      "purpose": "official-electron-chain",
+      "filename": "fix10-public-asset-and-resource-chain-independent-result-v1.json",
+      "sha256": "1d3abed542bd5118054a15edd8caba218613b278e3f62e68bc06cb93d1bf2cc5"
+    },
+    {
+      "purpose": "source-repair",
+      "filename": "silent-process-source-repair-checks-v1.json",
+      "sha256": "35f9b0e0344d0d5f65a7b64223a3f043ca054260e7573619ddf9460e05a8c6b5"
+    }
+  ],
+  "scope": "FIX10 ordinary-account first install, identical-FIX10 silent update, path-specific process-preservation, uninstall; installed compiled-main first ready/protocol registration/normal quit. No real-user older-version migration or all-plugin business claim.",
+  "limitations": [
+    "Local default Defender scan is specific to this exact hash and scan environment; no universal safety or false-positive claim.",
+    "FIX9 remains draft and its detected asset remains blocked.",
+    "No real user FIX8/FIX9 upgrade, old Purge private profile migration, full plugin business, interactive installer GUI or automatic updater handoff qualification.",
+    "Unsigned installer publisher reputation remains outside this validation."
+  ]
+}

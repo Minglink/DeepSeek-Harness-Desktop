@@ -1,0 +1,85 @@
+{
+  "version": "0.2.1-alpha.1",
+  "revision": "community-installer-process-fix10-20261012",
+  "baseCommit": "54c8cd5ec535d6e82a1b74fa36a33adab2c56a03",
+  "changedFiles": [
+    {
+      "relative": "apps/desktop/scripts/installer.nsh",
+      "before": {
+        "bytes": 8717,
+        "sha256": "5b934cbfb6d75b980d96e72f217beb8d1a5c738d4c9e9f82f5c5bd4fb5580849"
+      },
+      "after": {
+        "bytes": 8075,
+        "sha256": "0a3cc4ef20bbd0460af79fc5a0a47403cc6d25c7746b74b95069cee0588b1ec3"
+      },
+      "candidate": "C:\\Users\\Administrator\\Desktop\\dsh0.2.0-社区版-完整源码\\apps\\desktop\\scripts\\installer.nsh"
+    },
+    {
+      "relative": "apps/desktop/tests/windows-installer-smoke.ps1",
+      "before": {
+        "bytes": 15524,
+        "sha256": "0d21d198dc356772849375ccf2ea1621ab350201f7a55e9f40bac217ccd5e3d9"
+      },
+      "after": {
+        "bytes": 16299,
+        "sha256": "287ab498ec3e31d628f0e637ea3580f8184a4ba0467d1fa4c9ad8f7d0b674c5b"
+      },
+      "candidate": "C:\\Users\\Administrator\\Desktop\\dsh0.2.0-社区版-完整源码\\apps\\desktop\\tests\\windows-installer-smoke.ps1"
+    },
+    {
+      "relative": "apps/desktop/tests/windows-directory-installer.spec.ts",
+      "before": {
+        "bytes": 5722,
+        "sha256": "b95455b756ce41fc14f500491ddad96f36c89aed9a3c4b859e51f22d1b771396"
+      },
+      "after": {
+        "bytes": 6348,
+        "sha256": "e5bb2a5a3bb4aad4c0222508ffd75f449460af077af3b650f02b297a784d54fb"
+      },
+      "candidate": "C:\\Users\\Administrator\\Desktop\\dsh0.2.0-社区版-完整源码\\apps\\desktop\\tests\\windows-directory-installer.spec.ts"
+    },
+    {
+      "relative": "apps/desktop/README.md",
+      "before": {
+        "bytes": 136526,
+        "sha256": "1d1761506df85c217b5c68cfaafc2658617703aa74b22bebe06c2c84c79d0cc3"
+      },
+      "after": {
+        "bytes": 136580,
+        "sha256": "0f9869721f156b3f6ce1c6015c13c706dc32634eeaa6042d5a45d6ff94bf7de0"
+      },
+      "candidate": "C:\\Users\\Administrator\\Desktop\\dsh0.2.0-社区版-完整源码\\apps\\desktop\\README.md"
+    },
+    {
+      "relative": "apps/desktop/README.zh.md",
+      "before": {
+        "bytes": 120944,
+        "sha256": "41b6c2c1d3434ce4e352df42b1d4b67524869dfb7779ae3c2c7ffa6f1a3bfcf4"
+      },
+      "after": {
+        "bytes": 120986,
+        "sha256": "0aa029202a9f732a8dd364ee357595964fee9f23bddb93d54859b52b93328a15"
+      },
+      "candidate": "C:\\Users\\Administrator\\Desktop\\dsh0.2.0-社区版-完整源码\\apps\\desktop\\README.zh.md"
+    },
+    {
+      "relative": "apps/desktop/README.i18n.yaml",
+      "before": {
+        "bytes": 3221,
+        "sha256": "e83e687a13d2d5b8540a85c4edd897be8c7558f3fa96e1c351b8dc5fab5bfa12"
+      },
+      "after": {
+        "bytes": 3221,
+        "sha256": "3f2b6882543c4a5d02a846acfabc511f2d6b1bc0ddecdfc0cc9c6965798d9906"
+      },
+      "candidate": "C:\\Users\\Administrator\\Desktop\\dsh0.2.0-社区版-完整源码\\apps\\desktop\\README.i18n.yaml"
+    }
+  ],
+  "preservedOtherFiles": 14681,
+  "completeSourceAsset": {
+    "path": "C:\\Users\\Administrator\\Desktop\\Deepseek Plugin Market\\scratch\\installer-local-repair-20261012\\release-recovery-preparation-v2\\DSH-0.2.1-fix10-source.tar.gz",
+    "bytes": 37519609,
+    "sha256": "e9098af06c1cf941a4c80c3ef77224ba06900193de6dcc28052ac1a3a6983c6e"
+  }
+}

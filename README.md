@@ -1,14 +1,31 @@
 # DeepSeek Harness Desktop
 
-## 当前社区版：0.2.1-alpha.1 · 修订 9
+## 当前社区版：0.2.1-alpha.1 · 修订 10
 
-[下载最终 FIX9 安装包](https://github.com/Minglink/DeepSeek-Harness-Desktop/releases/tag/v0.2.1-alpha.1-community-install-logs-fix9-20261012)，Windows x64 未签名预发布包。安装包 SHA-256：`abbf9789b0c543c103e2ee0fa16eed6563aa505bc45c4d9bcd65f15a16ca9e7d`。本次确切源码与范围见 [community-desktop-0.2.1-alpha.1-fix9](community-desktop-0.2.1-alpha.1-fix9)，完整可构建源码附在该 Release。
+[FIX10 发行与下载](https://github.com/Minglink/DeepSeek-Harness-Desktop/releases/tag/community-installer-process-fix10-20261012)。
 
-修复已有 Purge 私有环境下安装后续插件失败的问题；Verifier 与 WeShop 的真实安装、加载和重启结果及范围见 release-validation.json。Infinite Gen 5 使用作者完整包安装流程。其他插件按代码核对范围验收，历史发行保持可取。
+版本仍为 0.2.1-alpha.1；本次修订为 community-installer-process-fix10-20261012，Windows x64 未签名安装包，短下载名 DSH-0.2.1-fix10-win-x64.exe。
+
+修复静默安装按程序名终止进程的问题。只检查当前安装路径；等待 10 秒后仍运行则退出码 2，拒绝覆盖并保留该程序及其他安装目录的同名进程。未修改压缩、封装格式、签名或杀毒防护。
+
+当前精确安装包在本机默认 Windows Defender 完整静态扫描未检出威胁；这仅是该机器当次结果，不保证所有安全产品认可。FIX9 的原检测原因仍未确定，不宣称误报；该历史发行继续草稿暂停，原安装包地址继续阻断。
+
+实际资格限定于普通 Windows 账号 FIX10 首装、同一 FIX10 静默更新、运行进程保留及卸载；编译主程序首次 ready、协议注册与正常退出。未验证真实用户 FIX8/FIX9 升级、旧 Purge 私有环境迁移、所有插件或外部模型业务；交互安装 GUI、自动更新交接与未签名程序信誉也不属于该验收。完整报告范围以 release-validation.json 为准。
+
+安装包 SHA-256：5835ae167c31bfc12a945bdec28c75a313e7c62ad90bd729d3f42a7ff7f29857
+完整可构建源码 DSH-0.2.1-fix10-source.tar.gz SHA-256：e9098af06c1cf941a4c80c3ef77224ba06900193de6dcc28052ac1a3a6983c6e。
 
 ---
 
-## 当前社区版：0.2.1-alpha.1（2026-10-10 插件市场兼容修订）
+## 历史记录：0.2.1-alpha.1 · 修订 9（检测复核期间已暂停）
+
+[FIX9 历史记录（草稿暂停）](https://github.com/Minglink/DeepSeek-Harness-Desktop/releases/tag/v0.2.1-alpha.1-community-install-logs-fix9-20261012)，Windows x64 未签名预发布包。安装包 SHA-256：`abbf9789b0c543c103e2ee0fa16eed6563aa505bc45c4d9bcd65f15a16ca9e7d`。本次确切源码与范围见 [community-desktop-0.2.1-alpha.1-fix9](community-desktop-0.2.1-alpha.1-fix9)，完整可构建源码附在该 Release。
+
+修复已有 Purge 私有环境下安装后续插件失败的问题；Verifier 与 WeShop 的真实安装、加载和重启结果及范围见 release-validation.json。Infinite Gen 5 使用作者完整包安装流程。其他插件按原代码核对范围记录；该检测包下载保持暂停，历史功能验证不代表安全资格。
+
+---
+
+## 历史社区版：0.2.1-alpha.1（2026-10-10 插件市场兼容修订）
 
 [下载社区版修订包](https://github.com/Minglink/DeepSeek-Harness-Desktop/releases/tag/v0.2.1-alpha.1-community-market-fix)。Windows x64 未签名预发布安装包，完整版本仍为 `0.2.1-alpha.1`，社区修订为 `community-market-fix-20261010`，请通过修订文件名区分旧包。
 
