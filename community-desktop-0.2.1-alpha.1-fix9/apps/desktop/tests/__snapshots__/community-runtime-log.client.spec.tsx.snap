@@ -1,0 +1,19 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`client runtime log panel > shows saved original errors and their location in en without reading while collapsed 1`] = `
+{
+  "location": "Timeline.js:82",
+  "source": "Client",
+  "text": "Timeline order invariant failed",
+  "title": "Client runtime log",
+}
+`;
+
+exports[`client runtime log panel > shows saved original errors and their location in zh-CN without reading while collapsed 1`] = `
+{
+  "location": "Timeline.js:82",
+  "source": "客户端",
+  "text": "Timeline order invariant failed",
+  "title": "客户端运行日志",
+}
+`;

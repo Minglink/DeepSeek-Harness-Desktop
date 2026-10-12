@@ -1,0 +1,103 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`community task log panel > explains an older desktop bridge without invoking missing log APIs (en) 1`] = `
+{
+  "controls": [
+    {
+      "disabled": true,
+      "text": "Pause automatic scrolling",
+    },
+    {
+      "disabled": true,
+      "text": "Copy log",
+    },
+    {
+      "disabled": true,
+      "text": "Export log",
+    },
+    {
+      "disabled": true,
+      "text": "Refresh",
+    },
+  ],
+  "message": "This desktop version does not support installation logs. Update the desktop installer",
+}
+`;
+
+exports[`community task log panel > explains an older desktop bridge without invoking missing log APIs (zh-CN) 1`] = `
+{
+  "controls": [
+    {
+      "disabled": true,
+      "text": "暂停自动滚动",
+    },
+    {
+      "disabled": true,
+      "text": "复制日志",
+    },
+    {
+      "disabled": true,
+      "text": "导出日志",
+    },
+    {
+      "disabled": true,
+      "text": "刷新",
+    },
+  ],
+  "message": "当前桌面版本不支持安装日志，请更新桌面安装包",
+}
+`;
+
+exports[`community task log panel > shows durable errors, source, phase, exit code and localized controls (en) 1`] = `
+{
+  "buttons": [
+    "Hide install log",
+    "Pause automatic scrolling",
+    "Copy log",
+    "Export log",
+    "Refresh",
+  ],
+  "metadata": [
+    "Installing",
+    "pnpm",
+    "Error",
+    "ERR_PNPM_UNEXPECTED_VIRTUAL_STORE",
+    "Exit code: 1",
+  ],
+  "notices": [
+    "Some log entries could not be saved or read. Available entries are shown below",
+    "Earlier entries were omitted to keep this log bounded",
+  ],
+  "text": "ERR_PNPM_UNEXPECTED_VIRTUAL_STORE: virtual store directory differs
+command: pnpm install
+cwd: [profile]",
+  "title": "Installation log · DSH Purge",
+}
+`;
+
+exports[`community task log panel > shows durable errors, source, phase, exit code and localized controls (zh-CN) 1`] = `
+{
+  "buttons": [
+    "收起安装日志",
+    "暂停自动滚动",
+    "复制日志",
+    "导出日志",
+    "刷新",
+  ],
+  "metadata": [
+    "正在安装",
+    "pnpm",
+    "错误",
+    "ERR_PNPM_UNEXPECTED_VIRTUAL_STORE",
+    "退出码：1",
+  ],
+  "notices": [
+    "部分日志未能保存或读取，下面显示已有记录",
+    "为限制日志大小，较早的记录已省略",
+  ],
+  "text": "ERR_PNPM_UNEXPECTED_VIRTUAL_STORE: virtual store directory differs
+command: pnpm install
+cwd: [profile]",
+  "title": "安装日志 · DSH Purge",
+}
+`;

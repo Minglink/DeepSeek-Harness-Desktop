@@ -1,0 +1,15 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`desktop community panel > opens full-package download instructions without login or automatic installation (en) 1`] = `
+{
+  "action": "Open download and installation instructions",
+  "note": "This plugin requires manual installation. Download its complete package from the community detail page and follow the author’s instructions.",
+}
+`;
+
+exports[`desktop community panel > opens full-package download instructions without login or automatic installation (zh-CN) 1`] = `
+{
+  "action": "打开下载与安装说明",
+  "note": "此插件需要手动安装。请在社区详情页下载完整包，并按作者说明安装。",
+}
+`;

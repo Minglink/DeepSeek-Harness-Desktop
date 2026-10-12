@@ -1,0 +1,10 @@
+客户端运行日志
+即使界面或 Host 无法启动，也可以查看客户端警告与错误。
+DSH client runtime log
+2026-10-11T12:00:00.000Z renderer error plugins/novel/client.js:4614
+[client:novel] TypeError: undefined.subscribe
+    at authorApply (plugins/novel/client.js:4614:25)
+
+返回
+复制日志
+导出日志

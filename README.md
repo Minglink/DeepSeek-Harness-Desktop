@@ -1,5 +1,13 @@
 # DeepSeek Harness Desktop
 
+## 当前社区版：0.2.1-alpha.1 · 修订 9
+
+[下载最终 FIX9 安装包](https://github.com/Minglink/DeepSeek-Harness-Desktop/releases/tag/v0.2.1-alpha.1-community-install-logs-fix9-20261012)，Windows x64 未签名预发布包。安装包 SHA-256：`abbf9789b0c543c103e2ee0fa16eed6563aa505bc45c4d9bcd65f15a16ca9e7d`。本次确切源码与范围见 [community-desktop-0.2.1-alpha.1-fix9](community-desktop-0.2.1-alpha.1-fix9)，完整可构建源码附在该 Release。
+
+修复已有 Purge 私有环境下安装后续插件失败的问题；Verifier 与 WeShop 的真实安装、加载和重启结果及范围见 release-validation.json。Infinite Gen 5 使用作者完整包安装流程。其他插件按代码核对范围验收，历史发行保持可取。
+
+---
+
 ## 当前社区版：0.2.1-alpha.1（2026-10-10 插件市场兼容修订）
 
 [下载社区版修订包](https://github.com/Minglink/DeepSeek-Harness-Desktop/releases/tag/v0.2.1-alpha.1-community-market-fix)。Windows x64 未签名预发布安装包，完整版本仍为 `0.2.1-alpha.1`，社区修订为 `community-market-fix-20261010`，请通过修订文件名区分旧包。

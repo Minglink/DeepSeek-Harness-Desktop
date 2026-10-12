@@ -1,0 +1,86 @@
+{
+  "version": "0.2.1-alpha.1",
+  "revision": "community-install-logs-fix9-20261012",
+  "unsigned": true,
+  "installer": {
+    "name": "deepseek-harness-0.2.1-alpha.1-win-x64-community-install-logs-fix9-20261012-unsigned.exe",
+    "bytes": 496406345,
+    "sha256": "abbf9789b0c543c103e2ee0fa16eed6563aa505bc45c4d9bcd65f15a16ca9e7d"
+  },
+  "buildReport": {
+    "bytes": 260048,
+    "sha256": "4d89155fba4558fe574c7b97a59739eea951c1a2ef97a52dc86d819498489b33"
+  },
+  "buildInputManifest": {
+    "bytes": 149732,
+    "sha256": "d88ed3fc9d33b90fa2f66ab24b9cca56b8235cff21cdaf74a534efde423cd3fb"
+  },
+  "buildInputSha256": "8add60b807bb11604b952889828bb82ad91b16d21e935b2d18aa1860df40cd52",
+  "sourceArchive": {
+    "name": "deepseek-harness-0.2.1-alpha.1-community-install-logs-fix9-20261012-source.tar.gz",
+    "bytes": 37519520,
+    "sha256": "cf4fd6805195db3cc85594812e9c2b4c94f84583da7f82e95974bef9f6d22bf2",
+    "files": 14687,
+    "sourceTreeSha256": "04bb2e78c6f8961f9c13662946389b6c4de54525a720150bda91e9c17071f20c"
+  },
+  "releaseGate": {
+    "bytes": 7687,
+    "sha256": "42f0a0e0a166482fae62015ef1177ce641edbf8e4b616717647e00a0f758fcec"
+  },
+  "basicQualification": {
+    "existingPurgePrivateProfile": true,
+    "verifier": true,
+    "weshop": true,
+    "purge": true,
+    "ig5": {
+      "ig5Revision": "community-install-logs-fix8-20261011",
+      "ig5ReportSha256": "2d9ae07b1121247ef0ce77152c8f36c02ac6f2b7878833d52e8b86646b26f28e",
+      "ig5InstallMethod": "Complete official author ZIP and offline install script; not an ordinary one-click TGZ.",
+      "ig5Fix9Reexecuted": false,
+      "nsisLifecycleFix9Reexecuted": false,
+      "fix9NsisPayloadIntegrityVerified": true
+    },
+    "otherPluginsCodeReview": true,
+    "allPluginBusinessFunctions": false,
+    "allRepositoryGatesPassed": false
+  },
+  "qualificationScope": {
+    "actualFix9": {
+      "verifier": "0.1.1",
+      "weshop": "1.0.3-community.host-schema.1",
+      "purge": "1.1.68-community.stable-dock-entry.2",
+      "normalAccountLogin": true,
+      "normalCatalogFreshDownload": true,
+      "trialAndActivation": true,
+      "coldStartup": true,
+      "purgeApplyAndRevert": true,
+      "durableTaskLogReadAfterRestart": true,
+      "allSixShippedBundlesPresent": true
+    },
+    "processObservation": {
+      "productElectronHostAndPackageManagerExited": true,
+      "originalAggregateReportsPassed": false,
+      "reason": "The broad descendant observer retained a signed external Sogou input-method helper after the product exited. The independent ownership review preserves these false aggregate reports and the helper cleanup; no blanket process-name exemption or timeout relaxation was used."
+    },
+    "otherPlugins": {
+      "method": "Static package, entry, dependency and runtime-import review; no catalogue-wide machine or business tests.",
+      "allRuntimeCompatible": false,
+      "currentSchemaDeclarationsNeedingIndividualCompatibilityReview": 105,
+      "externalRuntimeReferences": 103,
+      "dynamicLoadingOrSecurityHeld": 2,
+      "universalAdaptationClaim": false
+    },
+    "retainedEvidence": {
+      "ig5Revision": "community-install-logs-fix8-20261011",
+      "ig5ReportSha256": "2d9ae07b1121247ef0ce77152c8f36c02ac6f2b7878833d52e8b86646b26f28e",
+      "ig5InstallMethod": "Complete official author ZIP and offline install script; not an ordinary one-click TGZ.",
+      "ig5Fix9Reexecuted": false,
+      "nsisLifecycleFix9Reexecuted": false,
+      "fix9NsisPayloadIntegrityVerified": true
+    },
+    "fullModelAndThirdPartyBusinessVerified": false,
+    "allRepositoryGatesPassed": false,
+    "userExistingProfileWritten": false
+  },
+  "excludedPrivateData": true
+}

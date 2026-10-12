@@ -1,0 +1,323 @@
+/** Trial probes retain the real authenticated HTTP bridge over an OS-assigned fixture listener and owned Host lifecycle hooks. */
+import { createServer, type Server } from 'node:http'
+import { tmpdir } from 'node:os'
+import { resolve } from 'node:path'
+import { afterEach, describe, expect, it } from 'vitest'
+import { assertCommunityBundleReady, observeCommunityOperation, trialCommunityBundle, type CommunityTrialHostFactory } from '../src/community-trial.ts'
+import { communityFailureSummary } from '../src/community-failure.ts'
+import { CommunityTransactionError } from '../src/community-transaction.ts'
+
+const servers: Server[] = []
+afterEach(async () => {
+  await Promise.all(servers.splice(0).map(server => new Promise<void>((resolve, reject) => {
+    server.close(error => error === undefined ? resolve() : reject(error))
+    server.closeAllConnections()
+  })))
+})
+const prepared = { spec: resolve(tmpdir(), '社区 fixture', 'private-fixture.tgz'), packageName: '@example/trial',
+  version: '1.2.3', bundle: '@example/trial' }
+const rows = [{ rowId: 'fixture-entry', moduleName: '@example/trial', entryId: 'fixture-entry' }]
+const bundle = { name: prepared.packageName, version: prepared.version, enabled: true, installed: true, optional: false, removable: true, rows, overrides: [] }
+const entry = { entryId: 'fixture-entry', moduleName: '@example/trial', enabled: true, fiberPhase: 'active' }
+
+async function fixture(values: {
+  install?: unknown
+  inventory?: unknown
+  entries?: unknown
+  onInstall?: () => Promise<void>
+  authenticationStatus?: number
+  rpcStatus?: number
+  startFailureAt?: number
+  stopFailure?: boolean
+  requestId?: string
+} = {}): Promise<{
+  createHost: CommunityTrialHostFactory; events: string[]; methods: string[]; fail: (error: Error) => void
+}> {
+  const methods: string[] = [], events: string[] = []
+  const server = createServer(async (request, response) => {
+    if (request.method === 'GET') {
+      if (values.authenticationStatus !== undefined) { response.writeHead(values.authenticationStatus); response.end(); return }
+      response.writeHead(303, { 'set-cookie': 'fixture_auth=private-cookie; HttpOnly; SameSite=Strict', location: '/' }); response.end(); return
+    }
+    expect(request.headers.cookie).toBe('fixture_auth=private-cookie')
+    if (values.rpcStatus !== undefined) { response.writeHead(values.rpcStatus); response.end(); return }
+    const chunks: Buffer[] = []
+    for await (const chunk of request) chunks.push(Buffer.from(chunk))
+    const payload = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+    methods.push(payload.method)
+    let value: unknown
+    if (payload.method === 'pluginManager/installBundle') {
+      expect(payload.payload.args).toEqual({ spec: `${prepared.packageName}@file:${prepared.spec.replace(/\\/gu, '/')}`,
+        options: { enabled: true, activation: 'after-restart', ...(values.requestId === undefined ? {} : { requestId: values.requestId }) } })
+      await values.onInstall?.()
+      value = values.install ?? { application: 'applied', changed: true }
+    } else if (payload.method === 'pluginManager/listBundles') value = values.inventory ?? [bundle]
+    else if (payload.method === 'pluginManager/listPlugins') value = values.entries ?? [entry]
+    else throw new Error('Unexpected fixture method')
+    response.writeHead(200, { 'content-type': 'application/json' })
+    response.end(JSON.stringify({ type: 'server-response', rpcId: payload.rpcId, result: { ok: true, value } }))
+  })
+  servers.push(server)
+  await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve) })
+  const address = server.address()
+  if (address === null || typeof address === 'string') throw new Error('Fixture listener has no TCP address')
+  let count = 0, failure: (error: Error) => void = () => {}
+  const createHost: CommunityTrialHostFactory = failed => {
+    const number = ++count
+    failure = failed
+    return {
+      start: async () => { events.push(`start-${number}`); if (values.startFailureAt === number) throw new Error('Fixture plugin or Host failure'); return { url: `http://127.0.0.1:${address.port}/?token=fixture-launch-token` } },
+      stop: async () => { events.push(`stop-${number}`); if (values.stopFailure) throw new Error('Fixture Host stop failed') },
+    }
+  }
+  return { createHost, events, methods, fail: error => failure(error) }
+}
+
+describe('community candidate Host trial', () => {
+  it('protects local package sources before native install and restores their links only after each Host exits', async () => {
+    const data = await fixture({ onInstall: async () => { data.events.push('install') } })
+    await trialCommunityBundle(data.createHost, prepared, new AbortController().signal, undefined, {
+      detach: () => { data.events.push('detach') },
+      restore: () => { data.events.push('restore') },
+    })
+    expect(data.events).toEqual(['start-1', 'detach', 'install', 'stop-1', 'restore', 'start-2', 'stop-2', 'restore'])
+  })
+
+  it('refuses native installation when author source protection fails and still stops before restoring', async () => {
+    const data = await fixture()
+    const error = await trialCommunityBundle(data.createHost, prepared, new AbortController().signal, undefined, {
+      detach: () => { data.events.push('detach'); throw new Error('Author source target changed') },
+      restore: () => { data.events.push('restore') },
+    }).catch((error: unknown) => error)
+    expect(communityFailureSummary(error)).toMatchObject({ cause: 'preparation', adaptationEligible: false })
+    expect(data.methods).toEqual([])
+    expect(data.events).toEqual(['start-1', 'detach', 'stop-1', 'restore'])
+  })
+
+  it('restores protected links after a real RPC reports native package failure', async () => {
+    const data = await fixture({ install: { application: 'failed', packageResult: { exitCode: 1,
+      kind: 'network', output: 'ERR_PNPM_FETCH_FAILED: fixture network failure' } } })
+    const error = await trialCommunityBundle(data.createHost, prepared, new AbortController().signal, undefined, {
+      detach: () => { data.events.push('detach') },
+      restore: () => { data.events.push('restore') },
+    }).catch((error: unknown) => error)
+    expect(error).toMatchObject({ code: 'trial-failed', adaptationEligible: false })
+    if (!(error instanceof CommunityTransactionError)) throw new Error('Expected a native trial failure')
+    expect(error.diagnosticTail).toContain('ERR_PNPM_FETCH_FAILED')
+    expect(data.events).toEqual(['start-1', 'detach', 'stop-1', 'restore'])
+  })
+
+  it('does not mutate local links when the owning Host cannot confirm exit', async () => {
+    const data = await fixture({ stopFailure: true })
+    const restored: string[] = []
+    await expect(trialCommunityBundle(data.createHost, prepared, new AbortController().signal, undefined, {
+      detach: () => {}, restore: () => { restored.push('unsafe restore') },
+    })).rejects.toMatchObject({ code: 'rollback-failed', restored: false, adaptationEligible: false })
+    expect(restored).toEqual([])
+  })
+
+  it('retains native error details when protected link restoration also fails', async () => {
+    const data = await fixture({ install: { application: 'failed', packageResult: { exitCode: 1,
+      kind: 'network', output: 'ERR_PNPM_FETCH_FAILED: first failure' } } })
+    const error = await trialCommunityBundle(data.createHost, prepared, new AbortController().signal, undefined, {
+      detach: () => {}, restore: () => { throw new Error('Author link restoration failed') },
+    }).catch((error: unknown) => error)
+    expect(error).toMatchObject({ code: 'trial-failed', restored: true, adaptationEligible: false })
+    if (!(error instanceof CommunityTransactionError)) throw new Error('Expected a restoration failure')
+    expect(error.diagnosticTail).toContain('ERR_PNPM_FETCH_FAILED: first failure')
+    expect(error.diagnosticTail).toContain('Author link restoration failed')
+    expect(data.events).toEqual(['start-1', 'stop-1'])
+  })
+
+  it('correlates native installation with the main-owned task across the real authenticated bridge', async () => {
+    const data = await fixture({ requestId: 'main-owned-task' })
+    await trialCommunityBundle(data.createHost, prepared, new AbortController().signal, 'main-owned-task')
+    expect(data.events).toEqual(['start-1', 'stop-1', 'start-2', 'stop-2'])
+  })
+  it('installs, fully restarts, checks native registered rows and awaits both owned Host stops', async () => {
+    const data = await fixture()
+    await trialCommunityBundle(data.createHost, prepared, new AbortController().signal)
+    expect(data.events).toEqual(['start-1', 'stop-1', 'start-2', 'stop-2'])
+    expect(data.methods).toEqual(['pluginManager/installBundle', 'pluginManager/listBundles', 'pluginManager/listPlugins'])
+  })
+
+  it('allows an install requiring restart only after the fresh Host reports actual active rows', async () => {
+    const data = await fixture({ install: { application: 'restart-required', changed: true } })
+    await trialCommunityBundle(data.createHost, prepared, new AbortController().signal)
+    expect(data.events).toEqual(['start-1', 'stop-1', 'start-2', 'stop-2'])
+  })
+
+  it('still invokes native installation and both Host probes for an unchanged same-version reinstall', async () => {
+    const data = await fixture({ install: { application: 'applied', changed: false } })
+    await trialCommunityBundle(data.createHost, prepared, new AbortController().signal)
+    expect(data.events).toEqual(['start-1', 'stop-1', 'start-2', 'stop-2'])
+    expect(data.methods).toEqual(['pluginManager/installBundle', 'pluginManager/listBundles', 'pluginManager/listPlugins'])
+  })
+
+  it('refuses an invalid prepared local artifact before allocating any candidate Host', async () => {
+    let allocations = 0
+    const createHost: CommunityTrialHostFactory = () => { allocations++; throw new Error('Host must not be allocated') }
+    await expect(trialCommunityBundle(createHost, { ...prepared, spec: 'relative.tgz' }, new AbortController().signal))
+      .rejects.toMatchObject({ code: 'trial-failed', adaptationEligible: false })
+    expect(allocations).toBe(0)
+  })
+
+  it.each([
+    { application: 'failed', changed: false }, { application: 'overridden', changed: true },
+    { application: 'applied', changed: true, error: { code: 'operation-error' } }, {},
+  ])('does not promote a refused or failed native install: %j', async install => {
+    const data = await fixture({ install })
+    await expect(trialCommunityBundle(data.createHost, prepared, new AbortController().signal)).rejects.toMatchObject({ code: 'trial-failed' })
+    expect(data.events).toEqual(['start-1', 'stop-1'])
+    expect(data.methods).toEqual(['pluginManager/installBundle'])
+  })
+
+  it('stops the restarted candidate when its Loader entry failed', async () => {
+    const data = await fixture({ entries: [{ ...entry, fiberPhase: 'failed' }] })
+    await expect(trialCommunityBundle(data.createHost, prepared, new AbortController().signal)).rejects.toMatchObject({ code: 'trial-failed' })
+    expect(data.events).toEqual(['start-1', 'stop-1', 'start-2', 'stop-2'])
+  })
+
+  it.each([
+    { packageResult: { exitCode: 1, kind: 'unknown', output: '[ERR_PNPM_UNEXPECTED_VIRTUAL_STORE] private directory' } },
+    { packageResult: { exitCode: 1, kind: 'permission', output: 'private stderr' } },
+    { packageResult: { exitCode: 0, kind: 'timeout', timedOut: true, output: '' } },
+    { error: { code: 'stale-approval' } },
+  ])('marks native deployment and policy failures ineligible for source adaptation: %j', async (result) => {
+    const data = await fixture({ install: { application: 'failed', changed: false, ...result } })
+    await expect(trialCommunityBundle(data.createHost, prepared, new AbortController().signal)).rejects.toMatchObject({ code: 'trial-failed', restored: true, adaptationEligible: false })
+    expect(data.events).toEqual(['start-1', 'stop-1'])
+  })
+
+  it('keeps an explicit native compatibility refusal eligible for the existing adaptation path', async () => {
+    const incompatible = [{ name: '@example/trial', version: '1.2.3', runtimeVersion: '0.2.1-alpha.1', peers: { '@deepseek-ai/dsh-settings': '^0.1.0' } }]
+    const data = await fixture({ install: { application: 'failed', changed: false,
+      error: { code: 'incompatible-version', incompatible },
+      packageResult: { exitCode: 1, kind: 'unknown', output: '', truncated: false, logPath: 'private-log', incompatible } } })
+    await expect(trialCommunityBundle(data.createHost, prepared, new AbortController().signal)).rejects.toMatchObject({ code: 'trial-failed', adaptationEligible: true })
+  })
+
+  it.each([
+    { authenticationStatus: 401 }, { rpcStatus: 503 }, { startFailureAt: 1 },
+  ])('does not rewrite plugin source to repair owned Host or transport failures: %j', async (options) => {
+    const data = await fixture(options)
+    await expect(trialCommunityBundle(data.createHost, prepared, new AbortController().signal)).rejects.toMatchObject({ code: 'trial-failed', adaptationEligible: false })
+  })
+
+  it('reports unfinished recovery rather than restoration when the owned Host cannot confirm exit', async () => {
+    const data = await fixture({ stopFailure: true })
+    await expect(trialCommunityBundle(data.createHost, prepared, new AbortController().signal)).rejects.toMatchObject({
+      code: 'rollback-failed', restored: false, adaptationEligible: false,
+    })
+    expect(data.events).toEqual(['start-1', 'stop-1', 'stop-1'])
+    expect(data.methods).toEqual(['pluginManager/installBundle'])
+  })
+
+  it('preserves the first native pnpm cause when teardown also fails', async () => {
+    const data = await fixture({ stopFailure: true, install: { application: 'failed', changed: false,
+      error: { code: 'operation-error' }, packageResult: { exitCode: 1, kind: 'unknown', output: 'ERR_PNPM_UNEXPECTED_VIRTUAL_STORE private-home' } } })
+    let error: unknown
+    try { await trialCommunityBundle(data.createHost, prepared, new AbortController().signal) }
+    catch (failure) { error = failure }
+    expect(error).toMatchObject({ code: 'rollback-failed', restored: false, adaptationEligible: false })
+    expect(communityFailureSummary(error)).toEqual({ code: 'rollback-failed', cause: 'ERR_PNPM_UNEXPECTED_VIRTUAL_STORE', cleanup: 'stop', adaptationEligible: false })
+    expect(data.events).toEqual(['start-1', 'stop-1'])
+    expect(data.methods).toEqual(['pluginManager/installBundle'])
+  })
+
+  it('leaves a concrete plugin startup failure eligible after native installation', async () => {
+    const data = await fixture({ startFailureAt: 2 })
+    await expect(trialCommunityBundle(data.createHost, prepared, new AbortController().signal)).rejects.toThrow('Fixture plugin or Host failure')
+    expect(data.events).toEqual(['start-1', 'stop-1', 'start-2', 'stop-2'])
+  })
+
+  it('cancels a pending native install and stops its Host before rejecting', async () => {
+    const entered = Promise.withResolvers<void>(), release = Promise.withResolvers<void>(), controller = new AbortController()
+    const data = await fixture({ onInstall: async () => { entered.resolve(); await release.promise } })
+    const operation = trialCommunityBundle(data.createHost, prepared, controller.signal)
+    const rejection = expect(operation).rejects.toThrow()
+    await entered.promise
+    controller.abort(new Error('Fixture cancellation'))
+    await rejection
+    release.resolve()
+    expect(data.events).toEqual(['start-1', 'stop-1'])
+  })
+
+  it('routes candidate fatal events into its own cancellation and teardown', async () => {
+    const entered = Promise.withResolvers<void>(), release = Promise.withResolvers<void>()
+    const data = await fixture({ onInstall: async () => { entered.resolve(); await release.promise } })
+    const operation = trialCommunityBundle(data.createHost, prepared, new AbortController().signal)
+    const rejection = expect(operation).rejects.toThrow()
+    await entered.promise
+    data.fail(new Error('Candidate fatal failure'))
+    await rejection
+    release.resolve()
+    expect(data.events).toEqual(['start-1', 'stop-1'])
+  })
+
+  it.each([
+    { value: {}, entries: [entry] }, { value: [], entries: [entry] },
+    { value: [{ ...bundle, version: '1.2.4' }], entries: [entry] },
+    { value: [{ ...bundle, enabled: false }], entries: [entry] },
+    { value: [{ ...bundle, error: { code: 'incompatible-version' } }], entries: [entry] },
+    { value: [{ ...bundle, rows: [] }], entries: [entry] },
+    { value: [bundle], entries: [] }, { value: [bundle], entries: {} },
+    { value: [bundle], entries: [{ ...entry, enabled: false, fiberPhase: null }] },
+    { value: [bundle], entries: [{ ...entry, fiberPhase: 'pending' }] },
+    { value: [bundle], entries: [{ ...entry, fiberPhase: 'loading' }] },
+    { value: [bundle], entries: [{ ...entry, fiberPhase: 'failed' }] },
+    { value: [bundle], entries: [{ ...entry, moduleName: 'other-plugin' }] },
+    { value: [bundle], entries: [{ ...entry, enabled: 'yes' }] },
+  ])('rejects missing, disabled, incompatible or non-active registrations: %j', ({ value, entries }) => {
+    expect(() => assertCommunityBundleReady(value, prepared.packageName, prepared.version, entries)).toThrow()
+  })
+
+  it('accepts optional disabled bundle rows alongside an actual active feature', () => {
+    assertCommunityBundleReady([{ ...bundle, rows: [...rows, { rowId: 'optional', moduleName: 'optional-plugin', entryId: 'optional' }] }],
+      prepared.packageName, prepared.version, [entry, { entryId: 'optional', moduleName: 'optional-plugin', enabled: false, fiberPhase: null }])
+  })
+
+  it('observes a completed owned operation and unregisters its cancellation observer', async () => {
+    const controller = new AbortController()
+    expect(await observeCommunityOperation(Promise.resolve('ready'), controller.signal)).toBe('ready')
+    controller.abort(new Error('Later cancellation'))
+  })
+})
+
+describe('structural first-party Loader groups in community inventory', () => {
+  const group = { rowId: 'scope', entryId: 'include:scope', moduleName: '@deepseek-ai/cordis-plugin-group', group: true }
+  it('accepts a real authenticated trial with a structural group and an active child', async () => {
+    const data = await fixture({ inventory: [{ ...bundle, rows: [group, ...rows] }], entries: [entry] })
+    await trialCommunityBundle(data.createHost, prepared, new AbortController().signal)
+    expect(data.events).toEqual(['start-1', 'stop-1', 'start-2', 'stop-2'])
+    expect(data.methods).toEqual(['pluginManager/installBundle', 'pluginManager/listBundles', 'pluginManager/listPlugins'])
+  })
+  it('requires the explicit group marker instead of exempting a module name', () => {
+    const { group: _marker, ...unmarked } = group
+    expect(() => { assertCommunityBundleReady([{ ...bundle, rows: [unmarked, ...rows] }],
+      prepared.packageName, prepared.version, [entry]) }).toThrow()
+  })
+  it.each([
+    { ...group, group: false }, { ...group, group: 'true' }, { ...group, moduleName: '@example/custom-group' },
+    { ...group, entryId: undefined }, { ...group, entryId: 1 }, { ...group, entryId: '' },
+  ])('rejects unrecognized or non-live structural group rows: %j', (invalid) => {
+    expect(() => { assertCommunityBundleReady([{ ...bundle, rows: [invalid, ...rows] }],
+      prepared.packageName, prepared.version, [entry]) }).toThrow()
+  })
+  it.each([
+    { entries: [] }, { entries: [{ ...entry, fiberPhase: 'failed' }] }, { entries: [{ ...entry, fiberPhase: 'pending' }] },
+    { entries: [{ ...entry, enabled: false, fiberPhase: null }] }, { entries: [{ ...entry, moduleName: '@example/impostor' }] },
+  ])('retains readiness checks for actual group children: %j', ({ entries }) => {
+    expect(() => { assertCommunityBundleReady([{ ...bundle, rows: [group, ...rows] }],
+      prepared.packageName, prepared.version, entries) }).toThrow()
+  })
+  it('refuses a group-only bundle with no enabled active feature', () => {
+    expect(() => { assertCommunityBundleReady([{ ...bundle, rows: [group] }], prepared.packageName, prepared.version, []) }).toThrow()
+  })
+  it('accepts nested recognized groups without relaxing the leaf identity', () => {
+    assertCommunityBundleReady([{ ...bundle, rows: [group, { ...group, rowId: 'nested', entryId: 'include:nested' }, ...rows] }], prepared.packageName, prepared.version, [entry])
+  })
+  it('rejects a missing second leaf even when another leaf is active', () => {
+    expect(() => { assertCommunityBundleReady([{ ...bundle, rows: [group, ...rows, { rowId: 'missing', entryId: 'include:missing', moduleName: '@example/missing' }] }], prepared.packageName, prepared.version, [entry]) }).toThrow()
+  })
+})

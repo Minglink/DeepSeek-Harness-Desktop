@@ -1,0 +1,1321 @@
+{
+  "version": "0.2.1-alpha.1",
+  "revision": "community-install-logs-fix9-20261012",
+  "previousPublicCommit": "aefeb66fb12767916869276ef74413606de55cc0",
+  "sourceTreeSha256": "04bb2e78c6f8961f9c13662946389b6c4de54525a720150bda91e9c17071f20c",
+  "buildInputSha256": "8add60b807bb11604b952889828bb82ad91b16d21e935b2d18aa1860df40cd52",
+  "exactBuildInputsVerified": 883,
+  "generatedInputsVerifiedButNotArchived": [
+    {
+      "relative": "packages/typert/generator/lib/types/tsdown-plugin.js",
+      "bytes": 6359,
+      "sha256": "580e74861ea1ff5b1c5d8dd56812de5d4a7af9e671a68e4f0ff220e81203d9b5"
+    }
+  ],
+  "excludedGeneratedDirectories": [
+    "website/.dist",
+    "apps/desktop/plugins/dsh-community/client"
+  ],
+  "excludedDependenciesAndUserData": true,
+  "changedFiles": [
+    {
+      "relative": ".dsh-build/client-build-environment.json",
+      "before": null,
+      "after": {
+        "bytes": 345,
+        "sha256": "222e9f2c7c489f6af4e4d547bfcf6a0c5228c499bd829e538dec7d809057c6b0"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/cli/src/profile-boot.ts",
+      "before": {
+        "bytes": 18595,
+        "sha256": "b126b259bd4877e7f10bedc60d506161cda09e556640972222305406e9b688ed"
+      },
+      "after": {
+        "bytes": 19115,
+        "sha256": "cf6c4893f6226b764adfd849d0c6fd25fc448d1fa967a190634bcb6dfa833b74"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop-host/config/desktop-defaults.patch.yml",
+      "before": {
+        "bytes": 7174,
+        "sha256": "0ae74fbaa5a93c859a42b2ecd8cc3c9240f2fd2d93670e5319c05f5ad57443e2"
+      },
+      "after": {
+        "bytes": 6071,
+        "sha256": "2acffbde8c735c95a98b59335015547be9e84211afc8ad76b34af8d60e920485"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop-host/package.json",
+      "before": {
+        "bytes": 1889,
+        "sha256": "32c586035c5ed9a872f1f63cb24b669a9e242e48cf04782b41a0f73d99fe4572"
+      },
+      "after": {
+        "bytes": 2250,
+        "sha256": "d2605da9d5d6314094bd247b88c96d0e52eade9ee6401e6aa38604a94a1d1204"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop-host/src/bootstrap.ts",
+      "before": null,
+      "after": {
+        "bytes": 1725,
+        "sha256": "77bbe0c1f1c2a852471605d5ce4150ec28055edcf54d6e1ca4fc6623ac8f55ba"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop-host/src/index.ts",
+      "before": {
+        "bytes": 8902,
+        "sha256": "eb43d209c0b9d3e6d8f9d5523e7573400b87887eee0eff16f8572add6c009b6e"
+      },
+      "after": {
+        "bytes": 10133,
+        "sha256": "28b5cf87fb947e04ab9d177beba81b7b4e1a0af16d0f8ececa6ea93abd3b4849"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop-host/src/install-log.ts",
+      "before": null,
+      "after": {
+        "bytes": 1453,
+        "sha256": "e597d267a64282d974519328d07bf5f55d452ccd8d41c1afea244876215dc4c0"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop-host/src/managed-harmony-pins.ts",
+      "before": null,
+      "after": {
+        "bytes": 284302,
+        "sha256": "f48f23d8824eea80646aaededf419e56a949e648945907f73f37e2ea63f9924b"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop-host/src/managed-harmony.ts",
+      "before": null,
+      "after": {
+        "bytes": 7527,
+        "sha256": "45605bb13ac8e1feeceaf1ce0eb55de294d103d0daccd6776734c051db2a8fe1"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop-host/src/managed-restart.ts",
+      "before": null,
+      "after": {
+        "bytes": 7513,
+        "sha256": "17b1cf2a629884a11366799d9f10793d6b718315f0312be2260fbb89fc1b7e46"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop-host/src/profile-owned-bundles.ts",
+      "before": null,
+      "after": {
+        "bytes": 1849,
+        "sha256": "16031c5a2c2bd182bdb409a419baa8458f4b25bf38860560f8715ac3e66b006b"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop-host/tests/bootstrap-publication.spec.ts",
+      "before": null,
+      "after": {
+        "bytes": 6993,
+        "sha256": "afb2baa6dd53fe683ddd9cf4941e7cd8c4b8ead5d52d596363133f826783aa6a"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop-host/tests/compaction-defaults.spec.ts",
+      "before": {
+        "bytes": 5364,
+        "sha256": "c5e809fc33f9fc57fbd852f170dc3bb6f04627d686b0f4ab3af67cc47be72423"
+      },
+      "after": {
+        "bytes": 5474,
+        "sha256": "6f498d21f71670f1f8afd47f71d4781f50c6a9a74aff2f6acaecb6de860f966f"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop-host/tests/install-log.spec.ts",
+      "before": null,
+      "after": {
+        "bytes": 2915,
+        "sha256": "30e667818c03b08b239a24ba885f123f60b95bc493852c92cca7918977f65c82"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop-host/tests/managed-bootstrap.spec.ts",
+      "before": null,
+      "after": {
+        "bytes": 4724,
+        "sha256": "ced7f5c38df48119ac33ac07e58bed988cea68ffb51e7778e67ea723173a3d39"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop-host/tsdown.config.ts",
+      "before": {
+        "bytes": 383,
+        "sha256": "e28a29c027aa8fa7860490bfa1000e8c5dda23f2b36e0dae2b5d5a10b5b5e9b8"
+      },
+      "after": {
+        "bytes": 719,
+        "sha256": "cf581b9b7c21fea8b6b4e3de5c7440769ba17f6cc35937f95ae71160553a3bc7"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/README.i18n.yaml",
+      "before": {
+        "bytes": 3026,
+        "sha256": "a833a20fa09c6302260d1d27250abdfe048a7b649237d4810871f16c701cff2b"
+      },
+      "after": {
+        "bytes": 3221,
+        "sha256": "e83e687a13d2d5b8540a85c4edd897be8c7558f3fa96e1c351b8dc5fab5bfa12"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/README.md",
+      "before": {
+        "bytes": 130333,
+        "sha256": "d39fb1b1d2385eb30743abb8c9a75f35f3d8de08bbd4c36581ab068249195b80"
+      },
+      "after": {
+        "bytes": 136526,
+        "sha256": "1d1761506df85c217b5c68cfaafc2658617703aa74b22bebe06c2c84c79d0cc3"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/README.zh.md",
+      "before": {
+        "bytes": 115628,
+        "sha256": "a824259675d4ff5080dc737199c66201cfea21563fd614003d723dd7bf9c6c2c"
+      },
+      "after": {
+        "bytes": 120944,
+        "sha256": "41b6c2c1d3434ce4e352df42b1d4b67524869dfb7779ae3c2c7ffa6f1a3bfcf4"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/installer/uninstall.nsh",
+      "before": {
+        "bytes": 1434,
+        "sha256": "f9d9884ba9e9a5cdddb89f70c59b84982364f3098f680c3f1cee59c8b615f0d4"
+      },
+      "after": {
+        "bytes": 1999,
+        "sha256": "80e6e59306872fcf9d878834f8215bbd975c68439e9ae31b1328ba3b2ce88752"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/plugins/dsh-community/README.i18n.yaml",
+      "before": {
+        "bytes": 953,
+        "sha256": "c9156deeb7bf6ebfe1d85f11902182a6e8f02dad5a4953d3fd62015deea1ed69"
+      },
+      "after": {
+        "bytes": 953,
+        "sha256": "e1839e2729d779d5f4692f41c64aceae03f782444c2e0f2fed2d41310086a71c"
+      },
+      "buildInput": false
+    },
+    {
+      "relative": "apps/desktop/plugins/dsh-community/README.md",
+      "before": {
+        "bytes": 3355,
+        "sha256": "5122208cdd732207d58e54d14139ea070b43ca51d7956b998d75ea4fe3d63d86"
+      },
+      "after": {
+        "bytes": 5666,
+        "sha256": "c887aa9927b195ed9628f10a2322fd1f55e63e18f6094030241be581ef33876f"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/plugins/dsh-community/README.zh.md",
+      "before": {
+        "bytes": 2795,
+        "sha256": "9ab2f78b343346659dea495ae96dc52b2d7109bf6399de5bd4dcf2a7571d8220"
+      },
+      "after": {
+        "bytes": 4761,
+        "sha256": "2daa5e3e61e71832bccc4b7c3e404b1b1b3a234b12361cf1e86fefe6eb62c388"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/plugins/dsh-community/src/client/Community.module.css",
+      "before": {
+        "bytes": 7782,
+        "sha256": "a6cf76c2a8db4aff8b161f25790da33d85d7ff0e02fae2bf8db3f67ff6099bc9"
+      },
+      "after": {
+        "bytes": 8705,
+        "sha256": "da1ea9b1a6d78843a9d55b9e44f4facd2445cb9ac7957cdefca436189071c8e7"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/plugins/dsh-community/src/client/CommunityRuntimeLogPanel.tsx",
+      "before": null,
+      "after": {
+        "bytes": 7555,
+        "sha256": "4dcfd19a7c9b2bfe6089f557a068dff124d24cac079f693e1a3a9402f6db47f0"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/plugins/dsh-community/src/client/CommunitySection.tsx",
+      "before": {
+        "bytes": 40910,
+        "sha256": "f67a58e12e3f88428612f731e597571b6bbfb183b832eaebe7544f3d90d5b33c"
+      },
+      "after": {
+        "bytes": 43038,
+        "sha256": "7c29b5a8a5d4c233a9bdd9fd4e42fb2f8e4b7d159f8e6110d9dff93876e04c99"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/plugins/dsh-community/src/client/CommunityTaskLogPanel.tsx",
+      "before": null,
+      "after": {
+        "bytes": 8104,
+        "sha256": "323db7e380cd744b4c3a01ba4be49005c36c1c27a3fa60928d8cab4dc6ba74e9"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/scripts/installer-directories.nsh",
+      "before": {
+        "bytes": 7192,
+        "sha256": "e78baf07824af4abbc1e81fdb05ca259c65b182ce39328c58991b1e3630b9038"
+      },
+      "after": {
+        "bytes": 8764,
+        "sha256": "7b99a8895e9260cb7a289c82980694166c60729d86dc477145c8811e809e393a"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/scripts/installer.nsh",
+      "before": {
+        "bytes": 8708,
+        "sha256": "769f98e8103be8ec57cafcea67a88f26e5949c6ce8c2fd329e5128e01bcbeb0c"
+      },
+      "after": {
+        "bytes": 8717,
+        "sha256": "5b934cbfb6d75b980d96e72f217beb8d1a5c738d4c9e9f82f5c5bd4fb5580849"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/scripts/smoke-installer-directories.ps1",
+      "before": {
+        "bytes": 5850,
+        "sha256": "a87eef42c2650dd8a65cb52d02f8755eb6389163704c1c305dcc54a706abe798"
+      },
+      "after": {
+        "bytes": 7858,
+        "sha256": "04d1100e906be21ed0fb91d58f9d56e39e4cd15d2efcdf0845bb22b84958cf6c"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/scripts/test-windows-protocol-uninstall.mjs",
+      "before": null,
+      "after": {
+        "bytes": 4624,
+        "sha256": "97c7c49d0c5c1a3d38bf398b78359b61ba84b7a61e278947d906f11f12386577"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/community-catalog.ts",
+      "before": {
+        "bytes": 13598,
+        "sha256": "e649b27e080f7a0c687b353511dc10dccceb3cb0a1a3bae9614c76279b85da38"
+      },
+      "after": {
+        "bytes": 14087,
+        "sha256": "070b3328c78285a1ed90fa42c558e04c3d678beac2a21b74fe4ad7ababb60f5f"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/community-failure.ts",
+      "before": {
+        "bytes": 6812,
+        "sha256": "27f9f8cfe79a0d365e1343c3056860c7f93094312e7bbc4958b53ebd649b3f0b"
+      },
+      "after": {
+        "bytes": 8947,
+        "sha256": "a524442d4cae918c7d7d91b7ebf237538a6282488a398837c943fc69083a5456"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/community-install.ts",
+      "before": {
+        "bytes": 42106,
+        "sha256": "9580228af450e23f7cfcc05724ccd387a3e5cdf5ef1950b7b4cd42731eaf450b"
+      },
+      "after": {
+        "bytes": 50459,
+        "sha256": "c4dcf0036d508639cc17dcfad432537313f3b20fa6ac41062fd7a1d85958bb5e"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/community-locales.ts",
+      "before": {
+        "bytes": 16073,
+        "sha256": "5b4f1e20718b0d4773225b7f28ee2fe76d51b27d1c6320d397d4862605497509"
+      },
+      "after": {
+        "bytes": 21249,
+        "sha256": "e013a22e399584f41bab87b38355afc5f36f490d2d3af3920fd00964f683a55c"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/community-profile-bundles.ts",
+      "before": {
+        "bytes": 11079,
+        "sha256": "7831f0b39a8ad0dd3ad083112c66bdb956c37f75cc4a0370c48a2b895e0bafc5"
+      },
+      "after": {
+        "bytes": 12864,
+        "sha256": "e4df5666c9ebca75eff412f83096305c7919c85f6bb4069a016740d4bb67c3dc"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/community-runtime-log.ts",
+      "before": null,
+      "after": {
+        "bytes": 9523,
+        "sha256": "c6215eb31cf9654ecf71fc23aba7237a8f9b425438e4b9191766dd51e064c12f"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/community-service.ts",
+      "before": {
+        "bytes": 26082,
+        "sha256": "c907a85c7d5307d6ce3494e48189c883438b24f6875fe172bf4f4b719f605cfa"
+      },
+      "after": {
+        "bytes": 37619,
+        "sha256": "2509ee9bd770bf03c6429845793de2c03ddea95e116f6f56818aac278856397c"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/community-task-log.ts",
+      "before": null,
+      "after": {
+        "bytes": 13852,
+        "sha256": "34a5b0ccb66429bba3f7f175bd6f3ba26c8bece3aa99176996448f3bd9ee2d74"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/community-transaction.ts",
+      "before": {
+        "bytes": 17195,
+        "sha256": "951dc01ca3d61de599af544680467873464ea80b653b6ee80ed8689a23e898b6"
+      },
+      "after": {
+        "bytes": 17803,
+        "sha256": "3ae9a07d37e8d684aadb9449963de562fe265321fb64c9435f8ab7eb756c7016"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/community-trial-bundles.ts",
+      "before": {
+        "bytes": 11497,
+        "sha256": "05cad9c8831e92675e59c3eda54cb8b617d2359a2689734f3c8062571d1f6e8a"
+      },
+      "after": {
+        "bytes": 14928,
+        "sha256": "6215f7c8c1e847f256950d30d5b1fcd6d9023c99731e47148b7087b79e058dd6"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/community-trial-profile.ts",
+      "before": {
+        "bytes": 10584,
+        "sha256": "d8e6a58b035d32ba81b44fd89ad8f7822e54d3fbdaa10560cfc6266d83e46aec"
+      },
+      "after": {
+        "bytes": 10605,
+        "sha256": "40ca71861c29ed0947ea7a553a64d5950ce159e8de76a66894d404da845db8f8"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/community-trial.ts",
+      "before": {
+        "bytes": 5957,
+        "sha256": "7a488c3e4106b6eda9dc85538c4f10f3d62f46968f7173342180904c5b1781de"
+      },
+      "after": {
+        "bytes": 7322,
+        "sha256": "08f9199ea859f0c4f7475485893a67916d711f213e44b0dee16da580750044da"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/community-types.ts",
+      "before": {
+        "bytes": 6465,
+        "sha256": "daca8d7aab3f70ef7cef728dad681894d5a02a86063be0df1e6855ab55d027d3"
+      },
+      "after": {
+        "bytes": 9033,
+        "sha256": "cc58a85e6ceb633d1ea46deaf3d9b1b644216db64eb013e08fbc3379fe5bca53"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/fatal-recovery.ts",
+      "before": {
+        "bytes": 5274,
+        "sha256": "786f45290a621d019c21866d7083a2b9137e89beabb16f2cd56b12ce965ff8d4"
+      },
+      "after": {
+        "bytes": 5579,
+        "sha256": "8f76a57f9119212daa637ee8b00675367a30b2d4da4fed1fb8c880a997c01314"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/host-process.ts",
+      "before": {
+        "bytes": 15062,
+        "sha256": "877e5f90156809be4e4675d65d26f83eebcdbd7749a41952f02e8810b6a594b6"
+      },
+      "after": {
+        "bytes": 18096,
+        "sha256": "9277116a29ebdf71dc57f9fd4706b1b6b74d2c4a87d0f322c6e21b3df3461a26"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/ipc.ts",
+      "before": {
+        "bytes": 5674,
+        "sha256": "f3b8551a4bd0f4481f499e77185eac713b5d2c8e1f847b775d3fd9edfd697c4e"
+      },
+      "after": {
+        "bytes": 6119,
+        "sha256": "c3a908f06a69e4ee7deae41a1acee9e5d5c4bffe5769de576a13c5f5107b98b9"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/locale.ts",
+      "before": {
+        "bytes": 21343,
+        "sha256": "e64229869aa09d806375cd88fa2a2b380aac3f5be1d544788d42b5763d0903ee"
+      },
+      "after": {
+        "bytes": 23122,
+        "sha256": "c5eafb7594d47c23db6fbb3d3bd238f63b2da242494d9f484f286937b5f8ec96"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/main.ts",
+      "before": {
+        "bytes": 75097,
+        "sha256": "f56df3d591d704d776aa1fa2264e73317a3c0ae162f22eb30ad0f37f99287c11"
+      },
+      "after": {
+        "bytes": 84902,
+        "sha256": "01aee7839f9113c6aafd5f2d4498a146baeb269e38327db05bb182b83a44538f"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/managed-host-restart.ts",
+      "before": null,
+      "after": {
+        "bytes": 9190,
+        "sha256": "addcbf6e62bf0925d57a9408a6b9695f90efa8680fd85d4171bae574297e11a2"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/preload-app.ts",
+      "before": {
+        "bytes": 6931,
+        "sha256": "ed2c6a46ce20e08536c10e84882c2547bf816f56b76466c3c4cd5d5ffcbfbd17"
+      },
+      "after": {
+        "bytes": 7547,
+        "sha256": "e30c1d062ee393960d09986d075cae5567f0ff4e5aedddfbb6fa86810aff541e"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/preload-console.ts",
+      "before": null,
+      "after": {
+        "bytes": 3137,
+        "sha256": "e9ed40a519c0a7ff829b4f5162f2159d54be9ef3995ca6c17c0c74f8e210266c"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/profile-local-links.ts",
+      "before": null,
+      "after": {
+        "bytes": 9029,
+        "sha256": "2d93f4bb6752ec0283f483dab7edbdfa488a746c8cac803bda3b2e4327a4db65"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/project-manager.ts",
+      "before": {
+        "bytes": 35557,
+        "sha256": "cf9702997bc00a92548f819844b8a940d56e6aef3c8ac534811a0a81cac4b8d7"
+      },
+      "after": {
+        "bytes": 35814,
+        "sha256": "e460d266f9be5d99158a70038278ccd04f045f2781ade5d5d9141294260aadff"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/renderer-console.ts",
+      "before": null,
+      "after": {
+        "bytes": 1946,
+        "sha256": "61166187c79a96cae9ae36982012c8f5601189ec6b1ce934c6817c554833b702"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/runtime-log-dialog.ts",
+      "before": null,
+      "after": {
+        "bytes": 2597,
+        "sha256": "fa41f00ffc2d438fee0a5bdb0a877cf4dfd5bfd3a61020df64249f4831f4645f"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/src/startup-package-operation.ts",
+      "before": null,
+      "after": {
+        "bytes": 10600,
+        "sha256": "cf735c1a2641931151a2866ab2280618f9ba0fb3f45341a5ee3a358cc80da049"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/__snapshots__/community-runtime-log.client.spec.tsx.snap",
+      "before": null,
+      "after": {
+        "bytes": 609,
+        "sha256": "4a104fc31ba19b95e30368815463ad9748d827f5b98db5795cf57aa5060a7b63"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/__snapshots__/community-section.client.spec.tsx.snap",
+      "before": null,
+      "after": {
+        "bytes": 707,
+        "sha256": "0bb8fb75903d72b2dcd997f997d475128bde796fc1bb24961be58530e7ef2900"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/__snapshots__/community-task-log.client.spec.tsx.snap",
+      "before": null,
+      "after": {
+        "bytes": 2470,
+        "sha256": "5d1e764d6a2a9e0834e37cfc1fc11bc4826ce30359949cbc9886304909ad5864"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/community-catalog.spec.ts",
+      "before": {
+        "bytes": 8817,
+        "sha256": "1cb2393957e9033a72b46ced21de0cbb1425a7df2021be50145abcb80736a6db"
+      },
+      "after": {
+        "bytes": 10665,
+        "sha256": "36388bb1d4e163a28ac368b4dadc0aefdcfccf697ca40c669a94fc0c82790018"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/community-failure.spec.ts",
+      "before": {
+        "bytes": 7939,
+        "sha256": "9baaa31e8dbb6591e50201b60e67b26622ab3c772e7074f13fcc07cbc98ed56d"
+      },
+      "after": {
+        "bytes": 11873,
+        "sha256": "169b5bf1959eed00e5819b2c8308bd44c229489ea737d9fabd7d7862f0370480"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/community-install.spec.ts",
+      "before": {
+        "bytes": 44960,
+        "sha256": "7daa005848b604b6ccaf25b6ded4e57d2b8631c22a3cdb2706155ed00ded0c47"
+      },
+      "after": {
+        "bytes": 61339,
+        "sha256": "855c6047d0e856724e47183a16db8a5a97b6ea2e6d0c5465b4c7e77c3ad6e55f"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/community-runtime-log.client.spec.tsx",
+      "before": null,
+      "after": {
+        "bytes": 8773,
+        "sha256": "fe970147fd60e8a0d344d490d725958c6a2efa31211e2c1d4d13d22265a5c4cf"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/community-runtime-log.spec.ts",
+      "before": null,
+      "after": {
+        "bytes": 8456,
+        "sha256": "f1bbf3ab6d32ab85f04f07d1b33ee59f62efe741f248381dc6a0ae9f6ad6b5a3"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/community-section.client.spec.tsx",
+      "before": {
+        "bytes": 38792,
+        "sha256": "04590535dd9e4b7139de4756e3e3f8fbd5df31c09bad077921874e4a7b979154"
+      },
+      "after": {
+        "bytes": 47015,
+        "sha256": "3d63d6a2b064d8a2e4aee4e4900ff51eb30bd2a6d29764df80ba217e4823b6fc"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/community-service.spec.ts",
+      "before": {
+        "bytes": 29306,
+        "sha256": "39825581103ae9c94c7345073ae2265da2af6110dfe1ab976dcca29b4cb605f3"
+      },
+      "after": {
+        "bytes": 45441,
+        "sha256": "bba07cade3465cb951dc8b6793009b11b2f3d7fd20e15911afc4d16322d97677"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/community-task-log.client.spec.tsx",
+      "before": null,
+      "after": {
+        "bytes": 13715,
+        "sha256": "fe6ee796b72f80248c2856dced4f085904b0170d950ec35873ae7e4d6b4b3022"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/community-task-log.spec.ts",
+      "before": null,
+      "after": {
+        "bytes": 6962,
+        "sha256": "e4233bb590ebc5d54d3742cc1c10a1d93ddf708f06d7a623a4910ba39cef2ee0"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/community-trial-bundles.spec.ts",
+      "before": {
+        "bytes": 16901,
+        "sha256": "6ef4dfaf677e208d4b931a9e33ca2cb2058d468f19bbee521da1058dbb08fd64"
+      },
+      "after": {
+        "bytes": 23990,
+        "sha256": "2740be65e8471a1df8d549950623b382cb87ae3eb5c7641680e7105a7a5ce548"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/community-trial.spec.ts",
+      "before": {
+        "bytes": 13829,
+        "sha256": "bf82d6cb2fa959fc6a52e5a9b3ca5cae0da2485bcee674ff9eb3396789cb106f"
+      },
+      "after": {
+        "bytes": 20745,
+        "sha256": "6bb4bb548fc27e381d18122859ab38d34a500413c05e5f1506ec729d0aa3d433"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/composition-pins.spec.ts",
+      "before": {
+        "bytes": 11078,
+        "sha256": "4fa3da65db51813b2e3c9a0dd5b0ac762cb2b972f03872d64fdeab21a2a9bfd4"
+      },
+      "after": {
+        "bytes": 11074,
+        "sha256": "b97d289db9f714a2a7640b5e9b95a4db0c2199e8574530aa3fd670276200d8fa"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/desktop-stock-bundles.spec.ts",
+      "before": null,
+      "after": {
+        "bytes": 4171,
+        "sha256": "af3a011fa4d95162972b73497b60d8892b75d218a34bfa04c6b538dd4b23a549"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/expected/fatal-address-in-use-en.txt",
+      "before": {
+        "bytes": 259,
+        "sha256": "af7bb36e675e589dca00a056412a14c3c80c4b30fcaee8522b1166aeb7a44068"
+      },
+      "after": {
+        "bytes": 283,
+        "sha256": "c9ec2e3fe86779f7ede519a7299d17eac3e9c59c7b7e0c5390375036dc2d2047"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/expected/fatal-address-in-use-zh-CN.txt",
+      "before": {
+        "bytes": 219,
+        "sha256": "7c176839723664b6154ecfd9b92400880b0f38e1d52c303ccc39bd27d6a732d6"
+      },
+      "after": {
+        "bytes": 247,
+        "sha256": "6eabb12d79c9a73874ad152d0bc27e1dcee4d45bd4c4c5f18f967d20b5b68c8a"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/expected/fatal-dialog-en.txt",
+      "before": {
+        "bytes": 335,
+        "sha256": "40caddf7455b828d6fe449ea0e257606ab0b3580f249f3f68149ff61c833009e"
+      },
+      "after": {
+        "bytes": 359,
+        "sha256": "63cc77cabfe9814764e1c008e83a14177a3d435a0bfeae1c05f9795b163260e7"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/expected/fatal-dialog-with-report-en.txt",
+      "before": {
+        "bytes": 449,
+        "sha256": "d39a091fdb69c20db8901ec5dff81fa3f9d7cd4a5168a8b955f628fdc91cdbed"
+      },
+      "after": {
+        "bytes": 473,
+        "sha256": "baec8fde06ac0319f679c532bde8372eb346dd125f8f83ccd9eb81344adb3622"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/expected/fatal-dialog-with-report-zh-CN.txt",
+      "before": {
+        "bytes": 405,
+        "sha256": "e9e0e7a31388311934fd4029ff9a90209c80d740dd3ff0988115691fe7249035"
+      },
+      "after": {
+        "bytes": 433,
+        "sha256": "c01f59aa5d327f856cdace4c30fa15baeaf60f7073bea122c5368c395de7b355"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/expected/fatal-dialog-zh-CN.txt",
+      "before": {
+        "bytes": 295,
+        "sha256": "1219cc75ee52b2817859c97f4ce54154ad7f8ecdffc37562645913d0110c6160"
+      },
+      "after": {
+        "bytes": 323,
+        "sha256": "cc6d3c4b8bde94f977a907292204717765bf4127013da57bb398c27c9e6da33f"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/expected/runtime-log-dialog-en.txt",
+      "before": null,
+      "after": {
+        "bytes": 323,
+        "sha256": "1674afb050604f57df0bb1aea7666f45bb6286b99be57f320e51b3fc58c6ce33"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/expected/runtime-log-dialog-zh-CN.txt",
+      "before": null,
+      "after": {
+        "bytes": 326,
+        "sha256": "86cc614530ff0b7cdb4586606bd6bd1d0f340ffe437693a3ca13cef96b903182"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/fatal-recovery.spec.ts",
+      "before": {
+        "bytes": 12649,
+        "sha256": "232c292d75a792050f3903a0e1303465c9b1ffbe084bd7185d8dfb88e87058da"
+      },
+      "after": {
+        "bytes": 14903,
+        "sha256": "e8778e224f03344387c08d1536cf051e85d749863169ba4c7777d1c9ecd6b3d2"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/fixtures/installer-directory-smoke.nsi",
+      "before": {
+        "bytes": 1318,
+        "sha256": "d58257c56908725554c7424767de9f482b5923f610a02685072874c5d8de438a"
+      },
+      "after": {
+        "bytes": 1657,
+        "sha256": "a332f68dc5341fb4c320bac32f98dd788380f94d9e98db4f51c8b3d29d46edfb"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/host-process.spec.ts",
+      "before": {
+        "bytes": 14611,
+        "sha256": "78d45a8e9c7fbe0730bde81df25f39d22ffe1b0a0250d7a58a06bb25e3be97cf"
+      },
+      "after": {
+        "bytes": 19446,
+        "sha256": "ff8e1f04d7cabd593b1b8e40d3fc16a7f966e3f5cccacea3726b3226668acdfb"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/preload-app.spec.ts",
+      "before": {
+        "bytes": 13939,
+        "sha256": "7117757519c96ace9f04d279ae763adcdb7a295662ea124bea14b1ba63c91275"
+      },
+      "after": {
+        "bytes": 14882,
+        "sha256": "d954300c034e0eba207e05a009b5c58b5f87863e293cfcbef1d261dd0fe0fe8b"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/preload-console.spec.ts",
+      "before": null,
+      "after": {
+        "bytes": 4896,
+        "sha256": "53405f89771745def54c28090f6f155bf9ddc195c4d7a04d6ce3b0e29f7f5936"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/profile-local-links.spec.ts",
+      "before": null,
+      "after": {
+        "bytes": 8634,
+        "sha256": "7226710e9939d5382ce41d0ef67773affa7e3e06a02799e4259c7af9b0526f61"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/project-manager.spec.ts",
+      "before": {
+        "bytes": 23604,
+        "sha256": "f1093f337f23ff1b4884119929a54aa3a90c3955dc58dbe0db338858beb6a946"
+      },
+      "after": {
+        "bytes": 29265,
+        "sha256": "20c6d550b98396f417806a5bf409b6068bda618590138898dc5210b0e16b148e"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/renderer-console.spec.ts",
+      "before": null,
+      "after": {
+        "bytes": 6613,
+        "sha256": "88e6178420ea2f7bb634e5380f3079237cc03ff494c96f80d13917cdd5bde12b"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/runtime-log-dialog.spec.ts",
+      "before": null,
+      "after": {
+        "bytes": 7380,
+        "sha256": "84737c62827c187a252c4d7c85c60da4a8241eb4e8f54da47098f8523a72846d"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/startup-package-operation.spec.ts",
+      "before": null,
+      "after": {
+        "bytes": 8114,
+        "sha256": "530609fa5fb68beeb7b085999091b8ce9a276573bac5aa089668c54cb8f5ba43"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "apps/desktop/tests/windows-protocol-uninstall-smoke.ps1",
+      "before": null,
+      "after": {
+        "bytes": 5322,
+        "sha256": "02fc18061842ba06c709030a9138c5345321d752b26dc3b5e5c7ee9638c5ca08"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "docs/subsystems/boot.i18n.yaml",
+      "before": {
+        "bytes": 474,
+        "sha256": "133492eb367bf52562bc6225ff13fee6dc0f9ab520fe0d40692cb1949f4b94ac"
+      },
+      "after": {
+        "bytes": 474,
+        "sha256": "7f1d32ae127f4e64a5a94e6f52de025867a6e8613bb66a8372c24aa4bde3a582"
+      },
+      "buildInput": false
+    },
+    {
+      "relative": "docs/subsystems/boot.md",
+      "before": {
+        "bytes": 15855,
+        "sha256": "127bd7c84a429c14a0cc74f31c99cc1a2e7ff07558838efd9f94ff83f56bac5d"
+      },
+      "after": {
+        "bytes": 16067,
+        "sha256": "c597e6c67dac6031f893dfb921496e908f017d374d88be5a28ac3d47dd230745"
+      },
+      "buildInput": false
+    },
+    {
+      "relative": "docs/subsystems/boot.zh.md",
+      "before": {
+        "bytes": 15679,
+        "sha256": "9d62b27853a2f3ee5dbc91f4214e09cf79b70bb103f5fa31790f12987252312f"
+      },
+      "after": {
+        "bytes": 15889,
+        "sha256": "e8b59f428d1fa19c9b9bd3b2638318101251b535fdf3d4531cc7711115074e93"
+      },
+      "buildInput": false
+    },
+    {
+      "relative": "packages/boot/app-boot/README.i18n.yaml",
+      "before": {
+        "bytes": 2776,
+        "sha256": "231176f59744c04b03ab12da004b8b7ec40c709d1478e1ade58314f4aefa9890"
+      },
+      "after": {
+        "bytes": 2776,
+        "sha256": "3a9f4392c449fad8223713f0cdb2039b712d95bdcef03f1b4469ffa667a0e7b2"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/boot/app-boot/README.md",
+      "before": {
+        "bytes": 33504,
+        "sha256": "2495739e69679ccf00df3435d89bb89631ba77fa890db4b73afd712b2e233a2c"
+      },
+      "after": {
+        "bytes": 34525,
+        "sha256": "b4066df1c729c90df06590c89f3766cec14b455de78f446250da874e626defa1"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/boot/app-boot/README.zh.md",
+      "before": {
+        "bytes": 31322,
+        "sha256": "51936d6cf27c045174d33c847ab65b17fcd1ab19483dc9fbbf4cddc61ff62c04"
+      },
+      "after": {
+        "bytes": 32234,
+        "sha256": "ad33f17941dc0804f23751f0626f809f59f04bac6b0a8ffc1e9ae2b648941098"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/boot/app-boot/src/profile-context.ts",
+      "before": {
+        "bytes": 6584,
+        "sha256": "dd263026e03d833f3e7f7b7c9cffc9e26145c8c92f869be59bb787134b6501c2"
+      },
+      "after": {
+        "bytes": 7560,
+        "sha256": "deabc43ed1d372ec8fb519c55aaec341a549b17d486ac98d0e12d953b06e007c"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/boot/app-boot/src/profile.ts",
+      "before": {
+        "bytes": 37184,
+        "sha256": "63ddd3026f9c65fce19b847c67cfdec82d0053822a6c1d6bcf037cc001853fbb"
+      },
+      "after": {
+        "bytes": 38169,
+        "sha256": "ce2e23528a84a89e4b47a85614a0f58866d1929f500761c2e20ca489995e6238"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/boot/app-boot/tests/deployment-defaults.spec.ts",
+      "before": null,
+      "after": {
+        "bytes": 3809,
+        "sha256": "fe1932ae8eb5ee23355dd785d7a5e23448cc70b6e9208b2b3ffd2419e42c161e"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/boot/app-boot/tests/profile-owned-bundles.spec.ts",
+      "before": null,
+      "after": {
+        "bytes": 5989,
+        "sha256": "32b3299b7f93c6c8e4110f0f10a85555e4391a5a842647b90989dede7d3c262d"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/boot/plugin-manager/README.i18n.yaml",
+      "before": {
+        "bytes": 2161,
+        "sha256": "2e889bc725dcfb4bd8cbfa0d6214b3740492dfd6f0a0d7769cd85fcc9eb6e45c"
+      },
+      "after": {
+        "bytes": 2161,
+        "sha256": "93ea12366abb52c6b9433a4ed68a8b1819f1a1d4d5f295ddb0400b83875935f9"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/boot/plugin-manager/README.md",
+      "before": {
+        "bytes": 22954,
+        "sha256": "c0280415be2feed1b28478bbd573cb5afbe555e55e84902bf2917b2da9fbe187"
+      },
+      "after": {
+        "bytes": 23854,
+        "sha256": "8b06f287c62433fbb43efdb6919e4d97474fa2d0a0022c0e39345bcb17584db9"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/boot/plugin-manager/README.zh.md",
+      "before": {
+        "bytes": 20997,
+        "sha256": "3133749660ddacb7695b3eaa94a2bd8a587aaa4283cb6cacd2fa12567e4cfddb"
+      },
+      "after": {
+        "bytes": 21820,
+        "sha256": "dd0a2bec4cb0af16c0827fcc99a56bd8be371178a7d458e5b562d7bdbae0bab5"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/boot/plugin-manager/src/github-connection.ts",
+      "before": {
+        "bytes": 3598,
+        "sha256": "b3ac3f2a13feee34b6abd3c72753f077823ed0131ebb0d2ba451bd57865a280f"
+      },
+      "after": {
+        "bytes": 3669,
+        "sha256": "14925610ca50cb718044e3b2f5dcea21f37a50839a1dc7b8d1b68a7ae81fee82"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/boot/plugin-manager/src/index.ts",
+      "before": {
+        "bytes": 46611,
+        "sha256": "8be858f2a99d988cbe32819be799da9b56f2e3a8326cddd65d563a29e22f7bf2"
+      },
+      "after": {
+        "bytes": 47473,
+        "sha256": "2ffec31796d5e47a4bc8d7c797ed02e75e2f7cbb5b08bd0b93604c6bb9002cc3"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/boot/plugin-manager/src/operations.ts",
+      "before": {
+        "bytes": 32689,
+        "sha256": "16d141f794041d06122ce9f8ab7bae6f55b4a78feefb620f9cb6c7ba5efac547"
+      },
+      "after": {
+        "bytes": 33210,
+        "sha256": "f7c5cfeebda9a3de766c14e722c0ac86a301044bf13ceebbe02154e4eac721bd"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/boot/plugin-manager/src/types.ts",
+      "before": {
+        "bytes": 11548,
+        "sha256": "7b485e84bdf9ef5c1c73d987c3b3618f598ca3c27674955fe10dde656cf301d2"
+      },
+      "after": {
+        "bytes": 11799,
+        "sha256": "7e1b9335b0a59ee11813e778158eedd0fc0e1090a3e2d10ffa4ce252c2f1c3ea"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/boot/plugin-manager/tests/github-connection.spec.ts",
+      "before": {
+        "bytes": 9828,
+        "sha256": "6eafcf85ab0eb7931f83f4ac4b8da8bf6c9a16b26cbb014f117f588d04baa299"
+      },
+      "after": {
+        "bytes": 11237,
+        "sha256": "23546a46de5e0eafaa5e5295796b86e4ec7bc4bf107e6c5644536724923baf79"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/boot/plugin-manager/tests/manager.spec.ts",
+      "before": {
+        "bytes": 97938,
+        "sha256": "00e33665ef015e4381e8b34419e823eb3564bd3415a50d3aeaed411a1506ac01"
+      },
+      "after": {
+        "bytes": 106267,
+        "sha256": "e6f7b67129ec550f5c2f21c9f65ccec71745dc3c7a7cbc8a2bfd539802dfe878"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/boot/plugin-manager/tests/operations-process.spec.ts",
+      "before": {
+        "bytes": 7562,
+        "sha256": "56a84e07f1f6369dc05b2a59be718238fd489998495afd9a23a3c76997a9b746"
+      },
+      "after": {
+        "bytes": 9091,
+        "sha256": "aa5b061d5a79ff4b261d72742a094567d8a25309fa0d4ce1ef67925af997f4a5"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/boot/plugin-manager/tests/operations.spec.ts",
+      "before": {
+        "bytes": 51238,
+        "sha256": "385ebe1a7218828a61ac73dd799ff805267c340517643dcef358cec0cd6dff8c"
+      },
+      "after": {
+        "bytes": 52258,
+        "sha256": "5ac5acc48b8aa275b0962a5b774406e1c3abb65e7143a39b6261ffd32572b6ca"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/client/web/README.i18n.yaml",
+      "before": {
+        "bytes": 2274,
+        "sha256": "31f419dbbd17ad207a08337414925f158ed9ffd12f825b30f4df9d0a0e53ace1"
+      },
+      "after": {
+        "bytes": 2274,
+        "sha256": "67d56c8be383e12d9dddc46268297759b0cafd600f226bde4ea4e67b2fd4580c"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/client/web/README.md",
+      "before": {
+        "bytes": 9367,
+        "sha256": "400b6fa5cd620e9fae02e466d07c58baa6ed6dd110ad4f1d985373fb47175df2"
+      },
+      "after": {
+        "bytes": 9748,
+        "sha256": "f6f2fb47b8d6ab9bd43a2620c69c6cfef1d39855e9ae78291929486f3eca054e"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/client/web/README.zh.md",
+      "before": {
+        "bytes": 8654,
+        "sha256": "5fd016482e42b8bddcf29aef233353895b50501851ce99a2566f291a0492932b"
+      },
+      "after": {
+        "bytes": 9031,
+        "sha256": "cb0eb07fca53a02e1fa5bfbfa5fdb4ec5163f44fc4255698d173765b7e0c34a4"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/client/web/src/boot-client.ts",
+      "before": {
+        "bytes": 4051,
+        "sha256": "b37cd77c5d51f6bf8503e5fa3e2ebae5c367e096a97b2fc350cc6e4c2b1c6f43"
+      },
+      "after": {
+        "bytes": 4926,
+        "sha256": "4be7236ddefddf4dc62ee88180a4a3ca256b9fcf307bc1b2c8d4ccaddc9bb8d2"
+      },
+      "buildInput": true
+    },
+    {
+      "relative": "packages/client/web/tests/boot-client.client.spec.ts",
+      "before": {
+        "bytes": 6590,
+        "sha256": "df47988bfe87d542c768b61335faa064971e5ec30c081541502b4d107ec70b9f"
+      },
+      "after": {
+        "bytes": 9938,
+        "sha256": "40c7e50fc69a0d504a2046dd1eb9724a177d09d2678f5b76f9912698d7d251fa"
+      },
+      "buildInput": true
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+Client runtime log
+Client warnings and errors are available even when the interface or Host cannot start.
+DSH client runtime log
+2026-10-11T12:00:00.000Z renderer error plugins/novel/client.js:4614
+[client:novel] TypeError: undefined.subscribe
+    at authorApply (plugins/novel/client.js:4614:25)
+
+Back
+Copy log
+Export log

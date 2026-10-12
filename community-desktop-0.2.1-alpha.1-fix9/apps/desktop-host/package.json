@@ -1,0 +1,72 @@
+{
+  "name": "@deepseek-ai/dsh-desktop-host",
+  "description": "Private Node-mode host process for the Electron desktop application",
+  "version": "0.2.1-alpha.1",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./services": {
+      "default": "./lib/services.js"
+    },
+    "./native-path": {
+      "default": "./lib/native-path.js"
+    },
+    "./host-log": {
+      "types": "./lib/types/host-log.d.ts",
+      "default": "./lib/host-log.js"
+    },
+    "./profile-links": {
+      "types": "./lib/types/profile-links.d.ts",
+      "default": "./lib/profile-links.js"
+    },
+    "./managed-restart": {
+      "types": "./lib/types/managed-restart.d.ts",
+      "default": "./lib/managed-restart.js"
+    }
+  },
+  "main": "lib/index.js",
+  "files": [
+    "lib/index.js",
+    "lib/cli.js",
+    "lib/services.js",
+    "lib/native-path.js",
+    "config/desktop.cordis.patch.yml",
+    "config/desktop-defaults.patch.yml",
+    "config/desktop-presets.patch.yml",
+    "lib/host-log.js",
+    "lib/profile-links.js",
+    "lib/managed-restart.js",
+    "lib/bootstrap.js",
+    "lib/managed-harmony.js",
+    "lib/managed-harmony-pins.js",
+    "lib/types/bootstrap.d.ts",
+    "lib/types/managed-harmony.d.ts",
+    "lib/types/managed-harmony-pins.d.ts"
+  ],
+  "dependencies": {
+    "@deepseek-ai/cordis": "workspace:~",
+    "@deepseek-ai/dsh": "workspace:*",
+    "@deepseek-ai/dsh-agent": "workspace:*",
+    "@deepseek-ai/dsh-app-boot": "workspace:*",
+    "@deepseek-ai/dsh-client-connection": "workspace:*",
+    "@deepseek-ai/dsh-deepseek-account": "workspace:*",
+    "@deepseek-ai/dsh-home-paths": "workspace:*",
+    "@deepseek-ai/dsh-host-webserver": "workspace:*",
+    "@deepseek-ai/dsh-jobs": "workspace:*",
+    "@deepseek-ai/dsh-schedule": "workspace:*",
+    "@deepseek-ai/dsh-skill-office": "workspace:*",
+    "@deepseek-ai/dsh-tool-workspace-dependencies": "workspace:*",
+    "@deepseek-ai/dsh-workspace": "workspace:*",
+    "@deepseek-ai/libreoffice-kit": "^0.1.5",
+    "koffi": "^3.1.0"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis-plugin-loader": "workspace:~",
+    "@deepseek-ai/cordis-plugin-include": "workspace:~",
+    "@deepseek-ai/dsh-skill": "workspace:*"
+  }
+}
